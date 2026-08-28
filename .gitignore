@@ -1,0 +1,23 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dev-dist
+
+# Local environment. .env.example is committed; anything real is not.
+.env
+.env.*
+!.env.example
+
+# Tooling caches and scratch
+.vite
+coverage
+*.log
+.eslintcache
+.playwright-mcp
+
+# Editors and OS
+.DS_Store
+.idea
+*.local

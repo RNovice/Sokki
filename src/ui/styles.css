@@ -1,0 +1,844 @@
+@import '../theme/themes.css';
+
+/**
+ * No web font is loaded, by design. Traditional Chinese and Japanese faces run
+ * 3–15 MB, and subsetting cannot help when the card text is whatever the user
+ * typed into their spreadsheet. The system stack is already on the device and
+ * already correct for each script.
+ */
+:root {
+  --sans: system-ui, -apple-system, 'Segoe UI', 'PingFang TC', 'Hiragino Sans',
+    'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  --mono: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --radius: 10px;
+  --gutter: 16px;
+  --tap: 48px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overscroll-behavior-y: none;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  /*
+   * A card dragged to the right extends the document's scrollable area and the
+   * browser offers a horizontal scrollbar — transforms do not move layout, but
+   * they do enlarge scrollable overflow. Dragging left never does this, because
+   * overflow past the start edge is not scrollable, which is why only one
+   * direction showed the bug.
+   *
+   * `clip` rather than `hidden` on purpose: `overflow-x: hidden` forces
+   * `overflow-y` to compute as `auto`, turning this into a scroll container and
+   * taking the sticky top bar with it. `clip` cuts the paint without creating
+   * one. Clipping here rather than on the card's own container means the card
+   * slides off the screen edge instead of vanishing at some inner boundary.
+   */
+  overflow-x: clip;
+}
+
+@supports not (overflow: clip) {
+  /* Safari below 16. The scroll container this creates is harmless: #app is
+     the full page, so the scrollport it introduces is the one already there. */
+  #app {
+    overflow-x: hidden;
+  }
+}
+
+/* ------------------------------------------------------------------ top bar */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px var(--gutter);
+  padding-top: max(10px, env(safe-area-inset-top));
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.topbar h1 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------------ buttons */
+
+button {
+  font: inherit;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+button.quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  min-height: 36px;
+  padding: 6px 10px;
+}
+
+button.quiet:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+button.small {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+/* Icons sit on the text baseline rather than the box centre, which is what
+   keeps a label and its icon from looking a pixel out of step. */
+button svg {
+  vertical-align: -0.14em;
+  flex: none;
+}
+
+button.icon-only {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  padding: 6px;
+  font-size: 18px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input[type='text'],
+input[type='url'],
+input[type='number'],
+select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 11px 12px;
+  width: 100%;
+  min-height: var(--tap);
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+label > .label-text {
+  color: var(--muted);
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
+
+/* -------------------------------------------------------------------- layout */
+
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 20px var(--gutter) calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+h2 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.notice {
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 10px 14px;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notice.bad {
+  border-left-color: var(--bad);
+  background: var(--bad-soft);
+}
+
+/* ------------------------------------------------------------------- landing */
+
+.row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/*
+ * A row you can open: label, a line of detail, and a chevron. Used for sample
+ * decks and for the help entries alike, so anything shaped like this on the
+ * landing page reads as "this goes somewhere" without a word of explanation.
+ */
+.row-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 14px;
+  min-height: 60px;
+}
+
+.row-link:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.row-link .deck-arrow {
+  transition: transform 120ms ease;
+}
+
+.row-link:hover .deck-arrow {
+  transform: translateX(2px);
+  color: var(--accent);
+}
+
+.row-link .name {
+  font-weight: 600;
+}
+
+.row-link .deck-arrow {
+  color: var(--muted);
+  font-size: 18px;
+  flex: none;
+}
+
+.row-link .sub {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.howto {
+  font-size: 14px;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.howto li {
+  margin: 0;
+}
+
+.howto ol {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ---------------------------------------------------------------------- quiz */
+
+.quiz {
+  flex: 1;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom));
+  max-width: 40rem;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.progress {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-track {
+  height: 3px;
+  background: var(--hairline);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 180ms ease;
+}
+
+/*
+ * The card is inset from the screen edges, which is not decoration: iOS Safari
+ * reads a rightward drag that begins at the very left edge as "go back". Since
+ * a swipe can only start on the card, and the card never touches the edge, the
+ * gesture and the browser stop competing — no JS interception needed.
+ */
+.card-stage {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.card {
+  flex: 1;
+  position: relative;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  /* Depth for the flip. Large enough that the rotation reads as a turn rather
+     than a fisheye distortion. */
+  perspective: 1400px;
+  /* Vertical scrolling stays with the browser; horizontal is ours. */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.card.dragging {
+  transition: none;
+}
+
+.card:not(.dragging) {
+  transition: transform 200ms ease;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 340ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.card-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+/*
+ * The card surface. Shared by the quiz card's two faces and by the panel a
+ * landing-page modal shows, so an explanation arrives on the same object the
+ * study cards are made of.
+ */
+.card-surface,
+.card-face {
+  display: flex;
+  text-align: center;
+  padding: 28px 20px;
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  /*
+   * Long answers scroll. Naming both axes is not redundant: setting only
+   * overflow-y forces overflow-x to compute as `auto` too, which quietly makes
+   * this a two-axis scroll container.
+   */
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /*
+   * This is the element a finger actually lands on — the faces cover the card
+   * completely — and it is a scroll container, which is where the touch-action
+   * lookup stops. Without pan-y declared *here*, the value on .card never
+   * applies, the browser claims horizontal drags for panning, and the swipe
+   * silently stops working on touch while still working with a mouse.
+   */
+  touch-action: pan-y;
+}
+
+/* Only the flipping card needs stacking and a hidden reverse. */
+.card-face {
+  position: absolute;
+  inset: 0;
+  /* Without this the reverse side shows through as mirrored text. */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.card-face.back {
+  transform: rotateY(180deg);
+}
+
+/* A quiet mark that the card has another side. Cheaper than a line of text,
+   and it needs no translation. */
+/*
+ * Prose on a card face: left-aligned and top-aligned, unlike the single centred
+ * term a quiz card holds. Shares the card's frame, not its typography.
+ */
+.card-body {
+  width: 100%;
+  align-self: stretch;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card-body h2 {
+  font-size: 15px;
+}
+
+.card-body ol {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.card-body .row-list {
+  gap: 6px;
+}
+
+.card-body .row-link {
+  padding: 9px 12px;
+  min-height: 44px;
+}
+
+.card-turn {
+  margin-top: auto;
+  padding-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.face-flip-mark {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: var(--muted);
+  opacity: 0.35;
+  font-size: 15px;
+}
+
+/*
+ * Centred with auto margins rather than `align-items: center` on the face.
+ * Centring a flex item that is taller than its scroll container pushes the
+ * start of the content above the scroll origin, and a scroll container cannot
+ * scroll to a negative offset — so the first lines of a long answer become
+ * permanently unreachable. Auto margins absorb free space when there is any and
+ * resolve to zero when there is not, which centres short text and leaves long
+ * text starting at the top where it can be read.
+ */
+.face-text {
+  margin: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  max-width: 34rem;
+}
+
+.face-question {
+  font-size: clamp(22px, 6vw, 30px);
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.face-answer {
+  font-size: clamp(17px, 4.5vw, 21px);
+  line-height: 1.6;
+}
+
+/* Swipe feedback: a tint on the card edge, so intent is visible before release. */
+.swipe-tint {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 80ms linear;
+}
+
+.swipe-tint.good {
+  background: var(--good-soft);
+}
+
+.swipe-tint.bad {
+  background: var(--bad-soft);
+}
+
+.answers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.answers button {
+  min-height: var(--tap);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+
+.answers .known {
+  border-color: var(--good);
+  color: var(--good);
+}
+
+.answers .unknown {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+/*
+ * Lit while a drag has passed the point where releasing would fire it. Filled
+ * solid rather than tinted: on a phone the thumb covers the card, so this is
+ * often the only feedback visible, and a subtle wash reads as decoration
+ * instead of as "this is what will happen".
+ */
+.answers button.armed {
+  transform: translateY(-3px) scale(1.03);
+  font-weight: 700;
+  transition: transform 90ms ease, background 90ms ease, color 90ms ease,
+    box-shadow 90ms ease;
+}
+
+.answers .known.armed {
+  background: var(--good);
+  border-color: var(--good);
+  color: var(--good-ink);
+  box-shadow: 0 4px 14px -2px var(--good);
+}
+
+.answers .unknown.armed {
+  background: var(--bad);
+  border-color: var(--bad);
+  color: var(--bad-ink);
+  box-shadow: 0 4px 14px -2px var(--bad);
+}
+
+/* The idle pair must not look almost-lit, or the difference stops reading. */
+.answers .known:not(.armed),
+.answers .unknown:not(.armed) {
+  background: var(--raised);
+}
+
+.hint-line {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 1.2em;
+}
+
+/* -------------------------------------------------------------------- result */
+
+.score {
+  font-size: clamp(28px, 8vw, 40px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.wrong-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--raised);
+}
+
+.wrong-list .item {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.wrong-list .item:last-child {
+  border-bottom: none;
+}
+
+.wrong-list .item .b {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.wrong-list .item .a {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------------- overlay */
+
+/*
+ * Centred rather than anchored to the bottom, because what it holds is a card
+ * and a card is an object you look at, not a drawer you pull up. The backdrop
+ * itself is the same one the settings and share sheets use, so dismissing works
+ * identically everywhere.
+ */
+.sheet-backdrop.centered {
+  align-items: center;
+  padding: 16px;
+}
+
+.card-modal {
+  position: relative;
+  width: 100%;
+  max-width: 30rem;
+  max-height: 80dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-modal .card-surface {
+  max-height: 100%;
+}
+
+/* Same corner the quiz card puts its turn mark in, so the top-right of a card
+   means the same thing throughout. */
+.card-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: 18px;
+  color: var(--muted);
+  background: transparent;
+  border-color: transparent;
+}
+
+.card-close:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--hairline);
+  background: var(--surface);
+}
+
+/* Keep a long title clear of the close button: 44px of button plus its 8px
+   inset, so the text stops before the button starts rather than beside it. */
+.card-modal .card-body h2 {
+  padding-right: 52px;
+}
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 45%);
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sheet {
+  background: var(--bg);
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  width: 100%;
+  max-width: 34rem;
+  max-height: 88dvh;
+  overflow-y: auto;
+  padding: 16px var(--gutter) calc(20px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sheet-head h2 {
+  flex: 1;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.switch input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+}
+
+.section-label {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+/* ------------------------------------------------------------------ banners */
+
+/*
+ * Notices, not modals. They sit under the top bar and push the content down
+ * rather than covering it, so nothing they say can hide the card being studied.
+ */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 8px var(--gutter);
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ spinner */
+
+.spin {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border: 2px solid var(--hairline);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+  vertical-align: -2px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  gap: 8px;
+}
+
+/* Desktop is the phone layout with more room, not a second design. */
+@media (min-width: 640px) {
+  .answers {
+    max-width: 26rem;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

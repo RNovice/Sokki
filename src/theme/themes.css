@@ -1,0 +1,217 @@
+/**
+ * Every colour in the app resolves through these fourteen tokens. Components
+ * never name a colour directly, so adding a theme is adding one block here and
+ * nothing else.
+ *
+ * Three states, not two. An explicit choice stamps `data-theme` on the root; the
+ * default "match system" setting stamps nothing, and only `prefers-color-scheme`
+ * separates light from dark there. So `:root` carries a complete light palette,
+ * the media query overrides tokens only when no theme is stamped, and each named
+ * theme redefines the full set so an explicit choice always wins.
+ */
+
+:root {
+  --bg: #f6f7f5;
+  --surface: #ffffff;
+  --raised: #ffffff;
+  --ink: #14181c;
+  --muted: #5b646a;
+  --hairline: #dbdfdb;
+  --accent: #2f6f6a;
+  --accent-ink: #ffffff;
+  --good: #2c6b4f;
+  --good-soft: #dcede4;
+  --bad: #9c3a3a;
+  --bad-soft: #f4e0e0;
+  --good-ink: #ffffff;
+  --bad-ink: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #0f1315;
+    --surface: #161b1e;
+    --raised: #1c2226;
+    --ink: #e6eaec;
+    --muted: #93a0a6;
+    --hairline: #2a3236;
+    --accent: #57b5ac;
+    --accent-ink: #08110f;
+    --good: #6cc294;
+    --good-soft: #14251c;
+    --bad: #e08a8a;
+    --bad-soft: #2a1717;
+    --good-ink: #0f1315;
+    --bad-ink: #0f1315;
+  }
+}
+
+:root[data-theme='light'] {
+  --bg: #f6f7f5;
+  --surface: #ffffff;
+  --raised: #ffffff;
+  --ink: #14181c;
+  --muted: #5b646a;
+  --hairline: #dbdfdb;
+  --accent: #2f6f6a;
+  --accent-ink: #ffffff;
+  --good: #2c6b4f;
+  --good-soft: #dcede4;
+  --bad: #9c3a3a;
+  --bad-soft: #f4e0e0;
+  --good-ink: #ffffff;
+  --bad-ink: #ffffff;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0f1315;
+  --surface: #161b1e;
+  --raised: #1c2226;
+  --ink: #e6eaec;
+  --muted: #93a0a6;
+  --hairline: #2a3236;
+  --accent: #57b5ac;
+  --accent-ink: #08110f;
+  --good: #6cc294;
+  --good-soft: #14251c;
+  --bad: #e08a8a;
+  --bad-soft: #2a1717;
+  --good-ink: #0f1315;
+  --bad-ink: #0f1315;
+}
+
+:root[data-theme='sepia'] {
+  --bg: #f2e9d7;
+  --surface: #faf4e6;
+  --raised: #fffaf0;
+  --ink: #33291b;
+  --muted: #6a5b41;
+  --hairline: #dccfb3;
+  --accent: #7f5220;
+  --accent-ink: #fffaf0;
+  --good: #4a6234;
+  --good-soft: #e6ebd4;
+  --bad: #94381f;
+  --bad-soft: #f3ded4;
+  --good-ink: #faf4e6;
+  --bad-ink: #faf4e6;
+}
+
+:root[data-theme='forest'] {
+  --bg: #0f1611;
+  --surface: #16201a;
+  --raised: #1c2820;
+  --ink: #e2ebe4;
+  --muted: #94a799;
+  --hairline: #283730;
+  --accent: #6fbf8a;
+  --accent-ink: #08130c;
+  --good: #7fca8f;
+  --good-soft: #16281a;
+  --bad: #dd8f84;
+  --bad-soft: #2a1a17;
+  --good-ink: #0f1611;
+  --bad-ink: #0f1611;
+}
+
+:root[data-theme='ocean'] {
+  --bg: #edf2f7;
+  --surface: #f7fafd;
+  --raised: #ffffff;
+  --ink: #121a22;
+  --muted: #54626f;
+  --hairline: #cfd9e4;
+  --accent: #1f5f92;
+  --accent-ink: #ffffff;
+  --good: #1f6b57;
+  --good-soft: #d9ece6;
+  --bad: #98383f;
+  --bad-soft: #f4dfe1;
+  --good-ink: #ffffff;
+  --bad-ink: #ffffff;
+}
+
+:root[data-theme='plum'] {
+  --bg: #16101a;
+  --surface: #1e1724;
+  --raised: #261e2d;
+  --ink: #ece5f0;
+  --muted: #a698ae;
+  --hairline: #332a3b;
+  --accent: #c08fd6;
+  --accent-ink: #14091a;
+  --good: #85c79c;
+  --good-soft: #19271f;
+  --bad: #e28fa0;
+  --bad-soft: #2b171d;
+  --good-ink: #16101a;
+  --bad-ink: #16101a;
+}
+
+:root[data-theme='sand'] {
+  --bg: #f7f3ec;
+  --surface: #fdfaf5;
+  --raised: #ffffff;
+  --ink: #241f18;
+  --muted: #675e51;
+  --hairline: #e2d9ca;
+  --accent: #8f5c14;
+  --accent-ink: #ffffff;
+  --good: #4c6534;
+  --good-soft: #e7ecd8;
+  --bad: #96392a;
+  --bad-soft: #f4e0da;
+  --good-ink: #ffffff;
+  --bad-ink: #ffffff;
+}
+
+:root[data-theme='slate'] {
+  --bg: #12161a;
+  --surface: #1a1f25;
+  --raised: #21272e;
+  --ink: #e3e8ed;
+  --muted: #9aa5b1;
+  --hairline: #2c343d;
+  --accent: #7fa9c9;
+  --accent-ink: #0b1116;
+  --good: #79c39d;
+  --good-soft: #16261f;
+  --bad: #dd8f95;
+  --bad-soft: #2a181a;
+  --good-ink: #12161a;
+  --bad-ink: #12161a;
+}
+
+:root[data-theme='rose'] {
+  --bg: #f9eff1;
+  --surface: #fdf7f8;
+  --raised: #ffffff;
+  --ink: #241519;
+  --muted: #6a545a;
+  --hairline: #e7d1d6;
+  --accent: #9c3651;
+  --accent-ink: #ffffff;
+  --good: #3f6a4f;
+  --good-soft: #e2eee6;
+  --bad: #9c3a3a;
+  --bad-soft: #f6dede;
+  --good-ink: #ffffff;
+  --bad-ink: #ffffff;
+}
+
+:root[data-theme='mono'] {
+  --bg: #ffffff;
+  --surface: #fafafa;
+  --raised: #ffffff;
+  --ink: #000000;
+  --muted: #4f4f4f;
+  --hairline: #cfcfcf;
+  --accent: #000000;
+  --accent-ink: #ffffff;
+  --good: #1f1f1f;
+  --good-soft: #ececec;
+  --bad: #1f1f1f;
+  --bad-soft: #e2e2e2;
+  --good-ink: #ffffff;
+  --bad-ink: #ffffff;
+}

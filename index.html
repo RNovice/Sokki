@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="把一份 Google Sheet 變成速記卡。不需要帳號，不保存你的任何資料。" />
+    <meta name="theme-color" content="#f6f7f5" />
+    <!-- Both spellings: the apple- prefix is deprecated but still what older
+         iOS reads when adding to the home screen, which is the only reliable
+         way to keep this app's storage from being evicted there. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <title>速記卡</title>
+    <script>
+      /*
+       * Deliberately blocking, and deliberately before the stylesheet.
+       *
+       * A module runs after the first paint, so choosing the theme in the app
+       * would show one frame of the wrong one — a flash of white on a dark
+       * theme is both ugly and a layout-stability problem. A few milliseconds
+       * of blocking buys it away.
+       *
+       * The key and attribute here must match src/theme/apply.ts.
+       */
+      (function () {
+        try {
+          var saved = localStorage.getItem('sokki:settings')
+          var theme = saved ? JSON.parse(saved).theme : 'system'
+          if (theme && theme !== 'system') {
+            document.documentElement.setAttribute('data-theme', theme)
+            var colors = {
+              light: '#f6f7f5', dark: '#0f1315', sepia: '#f2e9d7', forest: '#0f1611',
+              ocean: '#edf2f7', plum: '#16101a', sand: '#f7f3ec', slate: '#12161a',
+              rose: '#f9eff1', mono: '#ffffff'
+            }
+            var meta = document.querySelector('meta[name="theme-color"]')
+            if (meta && colors[theme]) meta.content = colors[theme]
+          } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            var m = document.querySelector('meta[name="theme-color"]')
+            if (m) m.content = '#0f1315'
+          }
+          var lang = saved ? JSON.parse(saved).locale : null
+          if (lang) document.documentElement.lang = lang
+        } catch (e) {
+          /* an unreadable preference is not worth a blank page */
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,31 @@
+# Cloudflare Pages.
+#
+# __INLINE_SCRIPT_HASH__ is replaced at build time by scripts/seal-csp.mjs with
+# the real hash of the theme script in index.html. That script has to be inline
+# — it runs before first paint to stop the theme flashing — but inlining it
+# must not cost the whole script-src policy, so it is allowed by hash instead.
+#
+# style-src keeps 'unsafe-inline' because the swipe animation sets a transform
+# through a style attribute. That governs attributes, not <style> blocks, and
+# the app never renders user text as HTML, so the exposure is nil.
+#
+# The two cloudflareinsights hosts are the Web Analytics beacon, which Pages
+# injects once analytics is turned on in the dashboard. Without them here the
+# CSP would silently block it.
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/decks/*
+  Cache-Control: public, max-age=3600
+
+/sw.js
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Content-Security-Policy: default-src 'self'; script-src 'self' '__INLINE_SCRIPT_HASH__' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://docs.google.com https://cloudflareinsights.com; frame-ancestors 'none'; base-uri 'self'; form-action 'none'
