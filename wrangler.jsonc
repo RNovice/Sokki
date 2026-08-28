@@ -1,0 +1,17 @@
+{
+  // Cloudflare Workers, not Pages: Pages is in maintenance mode and Cloudflare
+  // directs new projects to Workers, whose static assets support the same
+  // `_headers` file this site relies on for its CSP and cache policy.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sokki",
+  "compatibility_date": "2026-08-28",
+  "assets": {
+    "directory": "./dist"
+  }
+  // No `main`: there is no Worker script. Every response is a static file.
+  //
+  // No `not_found_handling` either. Routing is by query parameter — `/?d=jp-n5`
+  // is the same index.html as `/` — so there is no client-side path to fall
+  // back for, and a request for a path this site does not have should say so
+  // rather than answer with the app.
+}

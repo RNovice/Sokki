@@ -33,16 +33,29 @@ i18next (40 KB) and gtag.js (146 KB).
 
 ## Deploying
 
-Cloudflare Pages. Build command `npm run build`, output directory `dist`.
-Nothing else to configure: routing is by query parameter, so there is no
-SPA-fallback rule to set up.
+Cloudflare Workers, not Pages. Pages is in maintenance mode and Cloudflare
+directs new projects to Workers, whose static assets read the same `_headers`
+file, so nothing here had to change to follow them.
+
+`wrangler.jsonc` holds the whole configuration: a name, a compatibility date,
+and `dist` as the asset directory. There is no Worker script — every response
+is a file. In the dashboard, connect the repository and set:
+
+| Field | Value |
+| --- | --- |
+| Build command | `npm run build` |
+| Deploy command | `npx wrangler deploy` |
+
+No SPA-fallback rule to configure. Routing is by query parameter, so `/?d=jp-n5`
+is the same `index.html` as `/`, and a request for a path this site does not
+have should say so rather than answer with the app.
 
 `public/_headers` carries the cache policy and a Content-Security-Policy whose
 script hash is computed at build time by `scripts/seal-csp.mjs` — editing the
 inline theme script cannot leave the policy stale.
 
-Turn on Web Analytics in the Pages dashboard for traffic and Core Web Vitals.
-It sets no cookie and no identifier, so it needs no consent banner and does not
+Turn on Web Analytics in the dashboard for traffic and Core Web Vitals. It sets
+no cookie and no identifier, so it needs no consent banner and does not
 contradict the promise above. The CSP already allows its beacon.
 
 ## Shape of the code
