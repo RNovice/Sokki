@@ -2,7 +2,6 @@ import { isFinished } from '../core/session'
 import type { DeckPrefs, Direction, Session } from '../core/types'
 import { t, tp } from '../i18n'
 import { SelectField, ToggleField } from './Field'
-import { Icon } from './Icon'
 
 const DIRECTIONS: Direction[] = ['front-back', 'back-front', 'mixed']
 
@@ -56,7 +55,6 @@ export function DeckHome({
       {unfinished ? (
         <div class="row">
           <button class="primary grow" onClick={onResume}>
-            <Icon name="chevron" />
             {t('deckHome.resume', {
               current: unfinished.pos + 1,
               total: unfinished.order.length,
@@ -67,7 +65,6 @@ export function DeckHome({
       ) : (
         <div class="row">
           <button class="primary grow" onClick={onStart}>
-            <Icon name="chevron" />
             {t('deckHome.start')}
           </button>
         </div>
