@@ -20,6 +20,7 @@ export default {
   'landing.howtoA': 'A 欄放正面（問題），B 欄放背面（答案）。',
   'landing.howtoNoHeader': '不要放標題列——第一列就是第一張卡。',
   'landing.howtoShare': '在 Google Sheets 按「共用」→「知道連結的任何人」→「檢視者」。',
+  'landing.howtoTab': '卡片不在第一個分頁時，先切到那個分頁，再從瀏覽器網址列複製網址——「共用」按鈕給的連結不帶分頁資訊。',
   'landing.howtoPublic': '這代表拿到連結的人都能讀這份試算表，請不要放個人隱私內容。',
 
   'deck.jpN5': '日文 N5 動詞',

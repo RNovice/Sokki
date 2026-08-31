@@ -114,6 +114,8 @@ export function Landing({ onOpen }: Props) {
             <li>{t('landing.howtoA')}</li>
             <li>{t('landing.howtoNoHeader')}</li>
             <li>{t('landing.howtoShare')}</li>
+            {/* Last because it is conditional: most sheets have one tab. */}
+            <li>{t('landing.howtoTab')}</li>
           </ol>
           <p class="muted">{t('landing.howtoPublic')}</p>
         </CardModal>
