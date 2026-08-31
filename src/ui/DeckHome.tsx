@@ -43,7 +43,12 @@ export function DeckHome({
   onRestart,
   onPrefs,
 }: Props) {
-  const unfinished = session && !isFinished(session) ? session : null
+  /*
+   * A round only counts as resumable once a card has actually been answered.
+   * A saved round still sitting at the first card has nothing to carry on with,
+   * and offering to continue it says there is progress where there is none.
+   */
+  const unfinished = session && !isFinished(session) && session.pos > 0 ? session : null
 
   return (
     <div class="page">
