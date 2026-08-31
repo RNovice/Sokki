@@ -82,4 +82,14 @@ export interface Session {
   firstTryCorrect: number
   startedAt: number
   direction: Direction
+  /**
+   * Whether this round's order was shuffled. Optional so that a round saved by
+   * a build before this field existed still loads; absent is read as shuffled,
+   * which is the default and so usually right.
+   *
+   * Stored rather than inferred: an order that happens to come out ascending is
+   * indistinguishable from one that was never shuffled, and guessing would put
+   * a wrong note on a short round.
+   */
+  shuffle?: boolean
 }

@@ -57,14 +57,16 @@ export function DeckHome({
    * reader has just changed something and is entitled to know it takes effect
    * next time rather than now.
    *
-   * Shuffle is not compared: an order cannot be inspected to tell whether it
-   * was shuffled, and storing the flag purely to power a note is not worth
-   * changing what a saved round looks like.
+   * All three settings are compared. Shuffle is read from the round rather than
+   * inferred from its order, because an order that happens to come out
+   * ascending looks exactly like one that was never shuffled; a round saved
+   * before that field existed reads as shuffled, which is the default.
    */
   const settingsDiffer =
     unfinished != null &&
     (unfinished.direction !== prefs.direction ||
-      unfinished.order.length !== roundSize(cardCount, prefs.count))
+      unfinished.order.length !== roundSize(cardCount, prefs.count) ||
+      (unfinished.shuffle ?? true) !== prefs.shuffle)
 
   return (
     <div class="page">

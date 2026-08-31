@@ -65,6 +65,7 @@ export function startSession(
     firstTryCorrect: 0,
     startedAt: Date.now(),
     direction: options.direction,
+    shuffle: options.shuffle,
   }
 }
 
@@ -79,6 +80,7 @@ export function retryWrong(previous: Session, shuffle: boolean): Session {
     firstTryCorrect: 0,
     startedAt: Date.now(),
     direction: previous.direction,
+    shuffle,
   }
 }
 
@@ -147,7 +149,9 @@ function isSession(value: unknown): value is Session {
     s.wrong.every((n) => typeof n === 'number') &&
     typeof s.firstTryCorrect === 'number' &&
     typeof s.startedAt === 'number' &&
-    (s.direction === 'front-back' || s.direction === 'back-front' || s.direction === 'mixed')
+    (s.direction === 'front-back' || s.direction === 'back-front' || s.direction === 'mixed') &&
+    // Absent is valid: rounds saved before the field existed still load.
+    (s.shuffle === undefined || typeof s.shuffle === 'boolean')
   )
 }
 

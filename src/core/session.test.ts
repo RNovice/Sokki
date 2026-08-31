@@ -185,6 +185,26 @@ describe('persistence', () => {
     expect(loadSession(KEY, 5)).toBeNull()
   })
 
+  it('loads a round saved before the shuffle field existed', () => {
+    // Absent must not invalidate the round; the deck screen reads it as
+    // shuffled, which is the default.
+    const session = startSession(5, { count: 0, shuffle: true, direction: 'front-back' })
+    const { shuffle: _dropped, ...withoutShuffle } = answer(session, true)
+    localStorage.setItem(`sokki:session:${KEY}`, JSON.stringify(withoutShuffle))
+    const loaded = loadSession(KEY, 5)
+    expect(loaded).not.toBeNull()
+    expect(loaded?.shuffle).toBeUndefined()
+  })
+
+  it('records whether the order was shuffled', () => {
+    const shuffled = startSession(20, { count: 0, shuffle: true, direction: 'front-back' })
+    const ordered = startSession(20, { count: 0, shuffle: false, direction: 'front-back' })
+    expect(shuffled.shuffle).toBe(true)
+    expect(ordered.shuffle).toBe(false)
+    // A retry keeps the setting it was given, not the previous round's.
+    expect(retryWrong(answer(ordered, false), true).shuffle).toBe(true)
+  })
+
   it('starts over on a saved round written by an incompatible build', () => {
     localStorage.setItem(`sokki:session:${KEY}`, JSON.stringify({ v: 99, pos: 3 }))
     expect(loadSession(KEY, 5)).toBeNull()
