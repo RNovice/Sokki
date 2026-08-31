@@ -37,6 +37,36 @@ type Stage =
   | { name: 'error'; ref: DeckRef; reason: LoadFailure }
   | { name: 'deck'; ref: DeckRef; cards: Card[] }
 
+/**
+ * Workbox broadcasts here when a stale-while-revalidate refresh found different
+ * bytes for a deck. The fresh copy is already in the cache by the time this
+ * fires, so acting on it costs no extra request — it only decides when to read
+ * what has already arrived.
+ */
+function useSourceChanged(): [boolean, () => void] {
+  const [changed, setChanged] = useState(false)
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return
+    const channel = new BroadcastChannel('deck-source-updated')
+    const onMessage = (event: MessageEvent) => {
+      const data: unknown = event.data
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        (data as { type?: string }).type === 'CACHE_UPDATED'
+      ) {
+        setChanged(true)
+      }
+    }
+    channel.addEventListener('message', onMessage)
+    return () => {
+      channel.removeEventListener('message', onMessage)
+      channel.close()
+    }
+  }, [])
+  return [changed, useCallback(() => setChanged(false), [])]
+}
+
 export function App() {
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
   const [stage, setStage] = useState<Stage>({ name: 'landing' })
@@ -46,6 +76,9 @@ export function App() {
   const [studying, setStudying] = useState(false)
   /** Shown once, when changing a setting threw away a round in progress. */
   const [discardedRound, setDiscardedRound] = useState(false)
+  /** Shown once, after the cards were re-read because the source moved. */
+  const [justRefreshed, setJustRefreshed] = useState(false)
+  const [sourceChanged, clearSourceChanged] = useSourceChanged()
   const [sheet, setSheet] = useState<'none' | 'settings' | 'share'>('none')
   /*
    * Bumped once the requested locale's strings have actually arrived. Loading
@@ -84,7 +117,19 @@ export function App() {
 
     try {
       const cards = await measureAsync('deck-fetch', () => loadDeck(ref))
+      const deckKeyForRef = deckKey(ref)
       setStage({ name: 'deck', ref, cards })
+      // Initialised here, where the cards are already in hand, rather than in
+      // an effect watching them. Watching them meant that re-reading the deck
+      // after the source moved re-ran the whole open sequence and wiped the
+      // very notice that said it had been re-read.
+      setPrefs(loadPrefs(deckKeyForRef))
+      setDiscardedRound(false)
+      setJustRefreshed(false)
+      // Restored, not resumed: an interrupted round is offered on the deck's
+      // home screen rather than dropping the reader into a card they did not
+      // ask for. Null simply means there is nothing to carry on with.
+      setSession(loadSession(deckKeyForRef, cards.length))
     } catch (error) {
       const reason: LoadFailure = error instanceof DeckLoadError ? error.reason : 'network'
       setStage({ name: 'error', ref, reason })
@@ -116,17 +161,6 @@ export function App() {
   const cards = stage.name === 'deck' ? stage.cards : null
 
   useEffect(() => {
-    if (!key || !cards) return
-    setPrefs(loadPrefs(key))
-    setDiscardedRound(false)
-    setStudying(false)
-    // Restored, not resumed: an interrupted round is offered on the deck's home
-    // screen rather than dropping the reader back into a card they did not ask
-    // for. Null simply means there is nothing to carry on with.
-    setSession(loadSession(key, cards.length))
-  }, [key, cards])
-
-  useEffect(() => {
     if (!key || !session) return
     if (isFinished(session)) clearSession(key)
     else saveSession(key, session)
@@ -136,9 +170,19 @@ export function App() {
     setSession((current) => (current ? answerCard(current, knew) : current))
   }, [])
 
+  /**
+   * Entering the quiz, however you got there. The deck screen's one-off notices
+   * are cleared here rather than in each caller, so resuming a round dismisses
+   * them just as starting a fresh one does.
+   */
+  const enterQuiz = useCallback(() => {
+    setDiscardedRound(false)
+    setJustRefreshed(false)
+    setStudying(true)
+  }, [])
+
   const beginRound = useCallback(() => {
     if (!cards || !prefs) return
-    setDiscardedRound(false)
     setSession(
       startSession(cards.length, {
         count: prefs.count,
@@ -146,8 +190,8 @@ export function App() {
         direction: prefs.direction,
       }),
     )
-    setStudying(true)
-  }, [cards, prefs])
+    enterQuiz()
+  }, [cards, prefs, enterQuiz])
 
   const restart = beginRound
 
@@ -172,6 +216,43 @@ export function App() {
     },
     [key, prefs, session],
   )
+
+  /* ------------------------------------------------------- source refresh */
+
+  /**
+   * Re-read the deck when the source has moved, but only from its home screen.
+   * Mid-round the cards must not change underneath the reader, so the update
+   * waits — which is what the banner says while it waits.
+   *
+   * No extra network request: the background revalidation that raised the flag
+   * has already put the fresh copy in the cache, so this fetch is a cache read.
+   */
+  useEffect(() => {
+    if (!sourceChanged || studying) return
+    if (stage.name !== 'deck' || !key) return
+    const ref = stage.ref
+    let cancelled = false
+    void (async () => {
+      try {
+        const fresh = await loadDeck(ref)
+        if (cancelled) return
+        setStage({ name: 'deck', ref, cards: fresh })
+        // Re-validate the saved round against the new deck. loadSession drops
+        // it when the card count no longer covers its indices; when the count
+        // is unchanged the round continues, and a card whose text was edited
+        // simply shows its new text.
+        setSession(loadSession(key, fresh.length))
+        setJustRefreshed(true)
+        clearSourceChanged()
+      } catch {
+        // Leave the flag set: the banner keeps saying so and the next visit to
+        // this screen tries again.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [sourceChanged, studying, stage, key, clearSourceChanged])
 
   /* ---------------------------------------------------------------- title */
 
@@ -206,7 +287,7 @@ export function App() {
         onSettings={() => setSheet('settings')}
       />
 
-      <Banners hasDeck={stage.name === 'deck'} />
+      <Banners hasDeck={stage.name === 'deck'} sourceChanged={sourceChanged && studying} />
 
       {stage.name === 'landing' ? (
         <Landing onOpen={(ref) => void openRef(ref, true)} />
@@ -240,9 +321,9 @@ export function App() {
             cardCount={stage.cards.length}
             prefs={prefs}
             session={session}
-            discardedRound={discardedRound}
+            notice={discardedRound ? 'discarded' : justRefreshed ? 'refreshed' : null}
             onStart={beginRound}
-            onResume={() => setStudying(true)}
+            onResume={enterQuiz}
             onRestart={beginRound}
             onPrefs={updatePrefs}
           />

@@ -72,6 +72,7 @@ export default {
   'deckHome.resume': 'Continue {current} / {total}',
   'deckHome.restart': 'Start over',
   'deckHome.discarded': 'Settings changed, so the unfinished round was dropped.',
+  'deckHome.refreshed': 'Loaded the latest content from the sheet.',
 
   'settings.title': 'Settings',
   'settings.language': 'Language',
@@ -107,6 +108,6 @@ export default {
   'share.openSheet': 'Open in Google Sheets',
 
   'banner.offline': 'Offline — showing the last loaded version.',
-  'banner.updated': 'The source changed. The next round will use it.',
+  'banner.updated': 'The sheet changed. It will be picked up back on the deck.',
   'banner.install': 'Add to your home screen to use it offline.',
 } satisfies Record<string, string>

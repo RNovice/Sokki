@@ -10,18 +10,28 @@ import { Icon } from './Icon'
  * important than any of them.
  */
 
-export function Banners({ hasDeck }: { hasDeck: boolean }) {
+/**
+ * `sourceChanged` is owned by App, not detected here: knowing the source moved
+ * is only half of it — something has to re-read the cards, and only App knows
+ * whether a round is under way and therefore whether now is a safe moment.
+ */
+export function Banners({
+  hasDeck,
+  sourceChanged,
+}: {
+  hasDeck: boolean
+  sourceChanged: boolean
+}) {
   const offline = useOffline()
-  const sourceChanged = useSourceChanged()
   const install = useInstallPrompt()
 
   return (
     <>
       {offline ? <Bar icon="offline" text={t('banner.offline')} /> : null}
       {/*
-       * Deliberately not applied on the spot. Swapping the cards out while
-       * someone is halfway through would reshuffle the round under them, so
-       * the new content waits for the next one.
+       * Only shown while a round is under way. On the deck's own screen the
+       * update is applied instead of announced — swapping cards out mid-round
+       * would reshuffle it under the reader, so there it waits.
        */}
       {sourceChanged && !offline ? <Bar text={t('banner.updated')} /> : null}
       {install && hasDeck && !offline ? (
@@ -66,31 +76,6 @@ function useOffline(): boolean {
     }
   }, [])
   return offline
-}
-
-/** Workbox posts here when a stale-while-revalidate refresh found new bytes. */
-function useSourceChanged(): boolean {
-  const [changed, setChanged] = useState(false)
-  useEffect(() => {
-    if (typeof BroadcastChannel === 'undefined') return
-    const channel = new BroadcastChannel('deck-source-updated')
-    const onMessage = (event: MessageEvent) => {
-      const data: unknown = event.data
-      if (
-        typeof data === 'object' &&
-        data !== null &&
-        (data as { type?: string }).type === 'CACHE_UPDATED'
-      ) {
-        setChanged(true)
-      }
-    }
-    channel.addEventListener('message', onMessage)
-    return () => {
-      channel.removeEventListener('message', onMessage)
-      channel.close()
-    }
-  }, [])
-  return changed
 }
 
 interface InstallEvent extends Event {

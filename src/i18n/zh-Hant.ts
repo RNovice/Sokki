@@ -69,6 +69,7 @@ export default {
   'deckHome.resume': '繼續 {current} / {total}',
   'deckHome.restart': '重新開始',
   'deckHome.discarded': '設定已變更，未完成的回合已捨棄。',
+  'deckHome.refreshed': '已讀取試算表的最新內容。',
 
   'settings.title': '設定',
   'settings.language': '語言',
@@ -104,6 +105,6 @@ export default {
   'share.openSheet': '在 Google Sheets 開啟',
 
   'banner.offline': '離線中，顯示上次載入的版本。',
-  'banner.updated': '來源已更新，下一輪測驗生效。',
+  'banner.updated': '試算表已變更，回到卡組後生效。',
   'banner.install': '加到主畫面，離線也能用。',
 } satisfies Record<string, string>

@@ -69,6 +69,7 @@ export default {
   'deckHome.resume': '続きから {current} / {total}',
   'deckHome.restart': '最初から',
   'deckHome.discarded': '設定を変更したため、途中のラウンドは破棄されました。',
+  'deckHome.refreshed': 'シートの最新の内容を読み込みました。',
 
   'settings.title': '設定',
   'settings.language': '言語',
@@ -104,6 +105,6 @@ export default {
   'share.openSheet': 'Google スプレッドシートで開く',
 
   'banner.offline': 'オフライン — 前回読み込んだ内容を表示しています。',
-  'banner.updated': '参照元が更新されました。次のラウンドから反映されます。',
+  'banner.updated': 'シートが変更されました。デッキに戻ると反映されます。',
   'banner.install': 'ホーム画面に追加するとオフラインでも使えます。',
 } satisfies Record<string, string>

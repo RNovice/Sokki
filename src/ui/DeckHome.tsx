@@ -10,8 +10,8 @@ interface Props {
   cardCount: number
   prefs: DeckPrefs
   session: Session | null
-  /** Set when changing a setting threw away a round that was under way. */
-  discardedRound: boolean
+  /** A one-off note about something that just happened to this deck. */
+  notice: 'discarded' | 'refreshed' | null
   onStart: () => void
   onResume: () => void
   onRestart: () => void
@@ -37,7 +37,7 @@ export function DeckHome({
   cardCount,
   prefs,
   session,
-  discardedRound,
+  notice,
   onStart,
   onResume,
   onRestart,
@@ -75,9 +75,13 @@ export function DeckHome({
         </div>
       )}
 
-      {discardedRound ? (
-        <div class="notice">
-          <span>{t('deckHome.discarded')}</span>
+      {notice ? (
+        <div class={notice === 'refreshed' ? 'notice info' : 'notice'}>
+          {/* Named outright rather than built from `notice`, so a search for
+              either key finds its use and the i18n check can see it. */}
+          <span>
+            {notice === 'refreshed' ? t('deckHome.refreshed') : t('deckHome.discarded')}
+          </span>
         </div>
       ) : null}
 
