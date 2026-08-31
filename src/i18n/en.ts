@@ -71,13 +71,11 @@ export default {
   'settings.language': 'Language',
   'settings.theme': 'Theme',
   'settings.swipe': 'Swipe gestures',
-  'settings.swipeNote': 'The buttons work either way.',
   'settings.deckSection': 'This deck',
   'settings.direction': 'Direction',
   'settings.count': 'Cards per round',
   'settings.countAll': 'All',
   'settings.shuffle': 'Shuffle',
-  'settings.shuffleNote': 'There is no schedule — every round is a fresh random draw.',
 
   'direction.front-back': 'Front → Back',
   'direction.back-front': 'Back → Front',

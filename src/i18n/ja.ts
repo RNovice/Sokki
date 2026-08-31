@@ -68,13 +68,11 @@ export default {
   'settings.language': '言語',
   'settings.theme': 'テーマ',
   'settings.swipe': 'スワイプ操作',
-  'settings.swipeNote': 'オフでもボタンで解答できます。',
   'settings.deckSection': 'このデッキ',
   'settings.direction': '出題方向',
   'settings.count': '1 ラウンドの枚数',
   'settings.countAll': 'すべて',
   'settings.shuffle': 'シャッフル',
-  'settings.shuffleNote': 'スケジュールはありません。毎回ランダムに出題します。',
 
   'direction.front-back': '表 → 裏',
   'direction.back-front': '裏 → 表',

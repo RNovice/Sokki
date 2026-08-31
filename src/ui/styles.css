@@ -175,6 +175,41 @@ select {
   min-height: var(--tap);
 }
 
+/*
+ * The trigger is ours; the popup stays the browser's. That split is the only
+ * one that behaves the same on every platform — the option list is drawn by the
+ * operating system and ignores nearly all styling — and it keeps the native
+ * keyboard handling and accessibility rather than reimplementing them.
+ */
+.select-wrap {
+  position: relative;
+  display: flex;
+}
+
+.select-wrap select {
+  appearance: none;
+  -webkit-appearance: none;
+  /* Room for the arrow we draw. */
+  padding-right: 38px;
+  cursor: pointer;
+}
+
+.select-chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  /* The set has one chevron, pointing right; a select's points down. */
+  transform: translateY(-50%) rotate(90deg);
+  font-size: 16px;
+  color: var(--muted);
+  /* The click has to reach the select underneath, or the arrow is a dead spot. */
+  pointer-events: none;
+}
+
+.select-wrap select:hover {
+  border-color: var(--accent);
+}
+
 label {
   display: flex;
   flex-direction: column;
@@ -757,18 +792,24 @@ p {
   gap: 14px;
 }
 
-.switch {
-  display: flex;
+/* Checkbox first, label beside it, one line. The whole row is the label
+   element, so the text is part of the hit area. */
+.toggle {
+  flex-direction: row;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   font-size: 14px;
+  cursor: pointer;
+  min-height: 44px;
 }
 
-.switch input {
-  width: 22px;
-  height: 22px;
+.toggle input {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin: 0;
   accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .section-label {
@@ -831,6 +872,21 @@ p {
     max-width: 26rem;
     margin: 0 auto;
     width: 100%;
+  }
+
+  /*
+   * A sheet rises from the bottom edge because that is where a thumb is. With a
+   * mouse there is no such edge to favour, and a panel anchored to the bottom of
+   * a tall window reads as something that failed to finish opening.
+   */
+  .sheet-backdrop {
+    align-items: center;
+    padding: 24px;
+  }
+
+  .sheet {
+    border-radius: 14px;
+    max-height: 78dvh;
   }
 }
 

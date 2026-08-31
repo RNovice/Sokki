@@ -68,13 +68,11 @@ export default {
   'settings.language': '語言',
   'settings.theme': '主題',
   'settings.swipe': '啟用滑動手勢',
-  'settings.swipeNote': '關掉之後仍然可以用按鈕作答。',
   'settings.deckSection': '這副牌',
   'settings.direction': '方向',
   'settings.count': '每輪題數',
   'settings.countAll': '全部',
   'settings.shuffle': '隨機出題',
-  'settings.shuffleNote': '沒有排程，每輪都是隨機抽考。',
 
   'direction.front-back': '正面 → 背面',
   'direction.back-front': '背面 → 正面',
