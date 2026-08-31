@@ -10,23 +10,45 @@ import { Icon } from './Icon'
  * Gesture thresholds. These are the difference between a swipe you meant and
  * one you did not.
  */
+
 /** Past this fraction of the card's width, releasing commits the answer. */
-const COMMIT_FRACTION = 0.4
+const COMMIT_FRACTION = 0.28
 /** …but never less than this, so a narrow screen still needs a real swipe. */
-const COMMIT_MIN_PX = 96
-/** Movement below this decides nothing: the card does not even follow yet. */
-const ACTIVATION_PX = 14
+const COMMIT_MIN_PX = 72
 /**
- * Horizontal has to beat vertical by this much before the gesture is treated as
- * a swipe. Without it, the sideways drift in a scroll down a long answer reads
- * as an answer — the single largest source of accidental ratings.
+ * A flick commits early. Distance alone forces a deliberate gesture to be a
+ * long one, which on a phone means dragging most of the way across the screen
+ * for every card. Speed says "deliberate" just as clearly and says it sooner,
+ * and it does not reintroduce accidental swipes, because the accidental ones
+ * are slow drift rather than fast flicks.
  */
-const DIRECTION_RATIO = 1.6
+const FLICK_VELOCITY_PX_PER_MS = 0.45
+/** A flick still has to travel far enough to be a gesture and not a tap. */
+const FLICK_MIN_PX = 44
+/** Movement below this decides nothing: the card does not even follow yet. */
+const ACTIVATION_PX = 12
+/**
+ * How much horizontal has to beat vertical before the gesture counts as a
+ * swipe — and the reason there are two numbers.
+ *
+ * The strict one exists to protect scrolling a long answer. But most cards are
+ * a word or a phrase with nothing to scroll, and on those the strictness buys
+ * nothing while rejecting the down-and-right arc that a thumb naturally makes.
+ * So the gate is only strict when there is actually a scroll to defend.
+ */
+const DIRECTION_RATIO_SCROLLABLE = 1.5
+const DIRECTION_RATIO_FIXED = 1.0
+/** How long the answered card takes to leave. */
+const EXIT_MS = 190
 /** A press still undecided when it ends, and this brief, is a tap. */
 const TAP_MAX_MS = 500
 
 function commitDistance(cardWidth: number): number {
   return Math.max(cardWidth * COMMIT_FRACTION, COMMIT_MIN_PX)
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 /**
@@ -38,7 +60,14 @@ function commitDistance(cardWidth: number): number {
 type Gesture =
   | { phase: 'none' }
   | { phase: 'pending'; id: number; x: number; y: number; at: number }
-  | { phase: 'horizontal'; id: number; originX: number }
+  | {
+      phase: 'horizontal'
+      id: number
+      originX: number
+      lastX: number
+      lastAt: number
+      velocity: number
+    }
   | { phase: 'vertical'; id: number }
 
 interface Props {
@@ -82,13 +111,38 @@ export function Quiz({ session, cards, swipeEnabled, resumed, onAnswer }: Props)
     )
   }, [marker])
 
+  /**
+   * The answered card leaves in the direction it was sent, and the next one
+   * fades up behind it. Previously it was replaced outright, which read as the
+   * new card flinching into place rather than the old one being dealt away.
+   *
+   * `onAnswer` is therefore deferred until the card has gone. The guard is a
+   * ref rather than state because a second swipe can arrive before a re-render.
+   */
+  const [exiting, setExiting] = useState<1 | -1 | null>(null)
+  const leaving = useRef(false)
+
   const commit = useCallback(
     (knew: boolean) => {
-      measure('card-advance', () => {
+      if (leaving.current) return
+      leaving.current = true
+
+      const direction = knew ? 1 : -1
+      setDragging(false)
+      setExiting(direction)
+      // Far enough that the card is gone whatever the viewport.
+      setDx(direction * Math.max(window.innerWidth, 400))
+
+      const settle = () => {
+        leaving.current = false
+        setExiting(null)
         setDx(0)
-        setDragging(false)
-        onAnswer(knew)
-      })
+        measure('card-advance', () => onAnswer(knew))
+      }
+      // With motion reduced there is no animation to wait for, and waiting
+      // anyway would just be a pause where the card used to move.
+      if (prefersReducedMotion()) settle()
+      else window.setTimeout(settle, EXIT_MS)
     },
     [onAnswer],
   )
@@ -122,7 +176,18 @@ export function Quiz({ session, cards, swipeEnabled, resumed, onAnswer }: Props)
 
   const gesture = useRef<Gesture>({ phase: 'none' })
 
+  /**
+   * Whether the side currently facing up has more content than fits. Only then
+   * is there a scroll worth protecting from a diagonal drag.
+   */
+  const faceCanScroll = useCallback((): boolean => {
+    const faces = cardEl.current?.querySelectorAll<HTMLElement>('.card-face')
+    const face = faces?.[showingBack ? 1 : 0]
+    return !!face && face.scrollHeight > face.clientHeight + 1
+  }, [showingBack])
+
   const onPointerDown = (event: PointerEvent) => {
+    if (leaving.current) return
     gesture.current = {
       phase: 'pending',
       id: event.pointerId,
@@ -142,7 +207,8 @@ export function Quiz({ session, cards, swipeEnabled, resumed, onAnswer }: Props)
       const moveY = event.clientY - g.y
       if (Math.hypot(moveX, moveY) < ACTIVATION_PX) return
 
-      if (!swipeEnabled || Math.abs(moveX) <= Math.abs(moveY) * DIRECTION_RATIO) {
+      const ratio = faceCanScroll() ? DIRECTION_RATIO_SCROLLABLE : DIRECTION_RATIO_FIXED
+      if (!swipeEnabled || Math.abs(moveX) <= Math.abs(moveY) * ratio) {
         // Committed to being a scroll. Releasing will not rate the card.
         gesture.current = { phase: 'vertical', id: g.id }
         return
@@ -150,11 +216,28 @@ export function Quiz({ session, cards, swipeEnabled, resumed, onAnswer }: Props)
       // Anchor on where the finger is now, not where it started, so the card
       // does not jump by the activation distance when it starts following.
       cardEl.current?.setPointerCapture(g.id)
-      gesture.current = { phase: 'horizontal', id: g.id, originX: event.clientX }
+      gesture.current = {
+        phase: 'horizontal',
+        id: g.id,
+        originX: event.clientX,
+        lastX: event.clientX,
+        lastAt: Date.now(),
+        velocity: 0,
+      }
       setDragging(true)
       return
     }
 
+    // Smoothed so one stuttering frame cannot read as a flick, and so the
+    // value still reflects the end of the gesture rather than its average.
+    const now = Date.now()
+    const elapsed = now - g.lastAt
+    if (elapsed > 0) {
+      const instant = (event.clientX - g.lastX) / elapsed
+      g.velocity = g.velocity * 0.3 + instant * 0.7
+      g.lastX = event.clientX
+      g.lastAt = now
+    }
     setDx(event.clientX - g.originX)
   }
 
@@ -177,8 +260,14 @@ export function Quiz({ session, cards, swipeEnabled, resumed, onAnswer }: Props)
 
     if (g.phase === 'horizontal') {
       const travelled = event.clientX - g.originX
+      const distance = Math.abs(travelled)
       const needed = commitDistance(cardEl.current?.offsetWidth ?? 300)
-      if (Math.abs(travelled) >= needed) commit(travelled > 0)
+      const flicked =
+        Math.abs(g.velocity) >= FLICK_VELOCITY_PX_PER_MS &&
+        distance >= FLICK_MIN_PX &&
+        Math.sign(g.velocity) === Math.sign(travelled)
+
+      if (distance >= needed || flicked) commit(travelled > 0)
       else setDx(0)
       return
     }
@@ -189,7 +278,7 @@ export function Quiz({ session, cards, swipeEnabled, resumed, onAnswer }: Props)
   const onPointerCancel = () => {
     gesture.current = { phase: 'none' }
     setDragging(false)
-    setDx(0)
+    if (!leaving.current) setDx(0)
   }
 
   /* -------------------------------------------------------------- render */
@@ -231,7 +320,7 @@ export function Quiz({ session, cards, swipeEnabled, resumed, onAnswer }: Props)
         <FlipCard
           key={marker}
           cardRef={cardEl}
-          className={dragging ? 'dragging' : ''}
+          className={`${dragging ? 'dragging' : ''}${exiting ? ' exiting' : ''}`.trim()}
           style={{ transform: `translateX(${dx}px) rotate(${dx * 0.02}deg)` }}
           flipped={showingBack}
           label={t('quiz.flip')}
