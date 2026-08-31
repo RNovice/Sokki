@@ -57,6 +57,36 @@ describe('long answers stay readable', () => {
   })
 })
 
+describe('iOS zoom', () => {
+  it('drops double-tap-to-zoom on the controls without touching pinch zoom', () => {
+    // `manipulation` keeps panning and pinch zoom and removes the auxiliary
+    // gestures. Answering two cards quickly otherwise reads as a double tap.
+    expect(block('button,\nselect,\n.toggle,\na')).toMatch(/touch-action:\s*manipulation/)
+  })
+
+  it('names pinch-zoom on the card, which pan-y alone would remove', () => {
+    // A bare `pan-y` takes pinch zoom away, leaving no way to magnify a card.
+    expect(block('.card')).toMatch(/touch-action:\s*pan-y pinch-zoom/)
+    expect(block('.card-surface,\n.card-face')).toMatch(/touch-action:\s*pan-y pinch-zoom/)
+  })
+
+  it('never lets the viewport forbid zooming', () => {
+    // The usual first answer to double-tap zoom, and the wrong one: it removes
+    // pinch zoom from people who need it, and iOS has ignored it since 10.
+    const html = readFileSync(
+      fileURLToPath(new URL('../../index.html', import.meta.url)),
+      'utf8',
+    )
+    expect(html).not.toMatch(/user-scalable\s*=\s*no/)
+    expect(html).not.toMatch(/maximum-scale\s*=\s*1(\D|$)/)
+  })
+
+  it('keeps text fields at 16px, below which iOS magnifies the page on focus', () => {
+    const fields = block("input[type='text'],\ninput[type='url'],\ninput[type='number'],\nselect")
+    expect(fields).toMatch(/font-size:\s*16px/)
+  })
+})
+
 describe('touch targets', () => {
   it('keeps the rating buttons at the minimum comfortable size', () => {
     expect(block('.answers button')).toMatch(/min-height:\s*var\(--tap\)/)

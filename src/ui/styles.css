@@ -97,6 +97,22 @@ body {
 
 /* ------------------------------------------------------------------ buttons */
 
+/*
+ * `manipulation` keeps panning and pinch zoom and drops the auxiliary gestures,
+ * of which double-tap-to-zoom is the one that hurts here: answering two cards
+ * quickly reads as a double tap and iOS zooms the page instead.
+ *
+ * Not fixed with `user-scalable=no` on the viewport, which would remove pinch
+ * zoom from people who need it — and which iOS has ignored since 10 for exactly
+ * that reason.
+ */
+button,
+select,
+.toggle,
+a {
+  touch-action: manipulation;
+}
+
 button {
   font: inherit;
   font-weight: 500;
@@ -166,6 +182,13 @@ input[type='url'],
 input[type='number'],
 select {
   font: inherit;
+  /*
+   * 16px is a floor, not a preference: iOS magnifies the whole page when a
+   * field whose text is smaller takes focus, which drags the layout sideways
+   * every time someone taps into the URL box. The label above stays at 14px —
+   * it is a caption; this is the thing being typed into.
+   */
+  font-size: 16px;
   color: var(--ink);
   background: var(--raised);
   border: 1px solid var(--hairline);
@@ -431,8 +454,14 @@ p {
   /* Depth for the flip. Large enough that the rotation reads as a turn rather
      than a fisheye distortion. */
   perspective: 1400px;
-  /* Vertical scrolling stays with the browser; horizontal is ours. */
-  touch-action: pan-y;
+  /*
+   * Vertical scrolling stays with the browser, horizontal is ours, and pinch
+   * zoom is named explicitly — a bare `pan-y` would take it away, leaving
+   * someone who needs to magnify a card unable to. Being anything other than
+   * `auto` also suppresses double-tap-to-zoom, which would otherwise fight the
+   * tap that turns the card over.
+   */
+  touch-action: pan-y pinch-zoom;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -490,8 +519,11 @@ p {
    * lookup stops. Without pan-y declared *here*, the value on .card never
    * applies, the browser claims horizontal drags for panning, and the swipe
    * silently stops working on touch while still working with a mouse.
+   *
+   * Pinch zoom is named alongside it for the same reason as on .card: a bare
+   * `pan-y` would remove the only way left to magnify a card.
    */
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 
 /*
