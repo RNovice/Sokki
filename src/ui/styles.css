@@ -792,8 +792,9 @@ p {
   gap: 14px;
 }
 
-/* Checkbox first, label beside it, one line. The whole row is the label
-   element, so the text is part of the hit area. */
+/* Checkbox first, label beside it, one line. The box can be small because the
+   whole 44px row is the label element and therefore the hit area — the target
+   is the row, not the square. */
 .toggle {
   flex-direction: row;
   align-items: center;
@@ -804,8 +805,8 @@ p {
 }
 
 .toggle input {
-  width: 20px;
-  height: 20px;
+  width: 17px;
+  height: 17px;
   flex: none;
   margin: 0;
   accent-color: var(--accent);
