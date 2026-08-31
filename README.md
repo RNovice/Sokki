@@ -76,4 +76,6 @@ migration path back to React, should 47 KB ever be worth it.
 
 Spaced repetition. Persisted progress. Writing to your spreadsheet. OAuth.
 CSV upload. Audio or images. Per-deck app icons. User-defined theme colours.
-Each was considered and rejected for a stated reason — see the development plan.
+Each was considered and rejected for a stated reason — see
+[DEVELOPMENT-PLAN.md](DEVELOPMENT-PLAN.md), which also records where the build
+since diverged from the plan and why.
