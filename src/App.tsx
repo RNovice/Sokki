@@ -23,6 +23,7 @@ import { t, useLocale } from './i18n'
 import { measureAsync } from './monitoring'
 import { applyTheme, watchSystemTheme } from './theme/apply'
 import { Banners } from './ui/Banners'
+import { DeckHome } from './ui/DeckHome'
 import { Landing } from './ui/Landing'
 import { Quiz } from './ui/Quiz'
 import { Result } from './ui/Result'
@@ -41,7 +42,10 @@ export function App() {
   const [stage, setStage] = useState<Stage>({ name: 'landing' })
   const [session, setSession] = useState<Session | null>(null)
   const [prefs, setPrefs] = useState<DeckPrefs | null>(null)
-  const [resumed, setResumed] = useState(false)
+  /** False means the deck's own home screen; true means a round is under way. */
+  const [studying, setStudying] = useState(false)
+  /** Shown once, when changing a setting threw away a round in progress. */
+  const [discardedRound, setDiscardedRound] = useState(false)
   const [sheet, setSheet] = useState<'none' | 'settings' | 'share'>('none')
   /*
    * Bumped once the requested locale's strings have actually arrived. Loading
@@ -76,7 +80,7 @@ export function App() {
     if (push) history.pushState({}, '', refToQuery(ref))
     setStage({ name: 'loading', ref })
     setSession(null)
-    setResumed(false)
+    setStudying(false)
 
     try {
       const cards = await measureAsync('deck-fetch', () => loadDeck(ref))
@@ -91,6 +95,7 @@ export function App() {
     history.pushState({}, '', location.pathname)
     setStage({ name: 'landing' })
     setSession(null)
+    setStudying(false)
   }, [])
 
   // Read the URL on first paint and whenever the back button moves us.
@@ -112,22 +117,13 @@ export function App() {
 
   useEffect(() => {
     if (!key || !cards) return
-    const deckPrefs = loadPrefs(key)
-    setPrefs(deckPrefs)
-
-    const saved = loadSession(key, cards.length)
-    if (saved) {
-      setSession(saved)
-      setResumed(true)
-      return
-    }
-    setSession(
-      startSession(cards.length, {
-        count: deckPrefs.count,
-        shuffle: deckPrefs.shuffle,
-        direction: deckPrefs.direction,
-      }),
-    )
+    setPrefs(loadPrefs(key))
+    setDiscardedRound(false)
+    setStudying(false)
+    // Restored, not resumed: an interrupted round is offered on the deck's home
+    // screen rather than dropping the reader back into a card they did not ask
+    // for. Null simply means there is nothing to carry on with.
+    setSession(loadSession(key, cards.length))
   }, [key, cards])
 
   useEffect(() => {
@@ -137,12 +133,12 @@ export function App() {
   }, [key, session])
 
   const onAnswer = useCallback((knew: boolean) => {
-    setResumed(false)
     setSession((current) => (current ? answerCard(current, knew) : current))
   }, [])
 
-  const restart = useCallback(() => {
+  const beginRound = useCallback(() => {
     if (!cards || !prefs) return
+    setDiscardedRound(false)
     setSession(
       startSession(cards.length, {
         count: prefs.count,
@@ -150,7 +146,10 @@ export function App() {
         direction: prefs.direction,
       }),
     )
+    setStudying(true)
   }, [cards, prefs])
+
+  const restart = beginRound
 
   const retryMisses = useCallback(() => {
     setSession((current) => (current ? retryWrong(current, prefs?.shuffle ?? true) : current))
@@ -162,17 +161,16 @@ export function App() {
       const next = { ...prefs, ...patch }
       setPrefs(next)
       savePrefs(key, next)
-      // Changing how a round is built means the round in progress no longer
-      // matches the settings that produced it, so start a fresh one.
-      setSession(
-        startSession(cards.length, {
-          count: next.count,
-          shuffle: next.shuffle,
-          direction: next.direction,
-        }),
-      )
+      // These settings decide how a round is built, so a round already under
+      // way no longer matches them and is dropped. It used to be dropped
+      // silently mid-quiz; now it can only happen from the deck's home screen,
+      // and the screen says so.
+      const hadRound = session != null && !isFinished(session)
+      clearSession(key)
+      setSession(null)
+      setDiscardedRound(hadRound)
     },
-    [key, prefs, cards],
+    [key, prefs, session],
   )
 
   /* ---------------------------------------------------------------- title */
@@ -202,7 +200,7 @@ export function App() {
       <TopBar
         title={deckTitle ?? t('app.name')}
         showBack={stage.name !== 'landing'}
-        onBack={goHome}
+        onBack={studying ? () => setStudying(false) : goHome}
         canShare={activeRef !== null}
         onShare={() => setSheet('share')}
         onSettings={() => setSheet('settings')}
@@ -230,38 +228,46 @@ export function App() {
             <button class="primary" onClick={() => void openRef(stage.ref, false)}>
               {t('common.retry')}
             </button>
-            <button onClick={goHome}>{t('result.backHome')}</button>
+            <button onClick={goHome}>{t('common.home')}</button>
           </div>
         </div>
       ) : null}
 
-      {stage.name === 'deck' && session && prefs ? (
-        isFinished(session) ? (
+      {stage.name === 'deck' && prefs ? (
+        !studying ? (
+          <DeckHome
+            title={deckTitle ?? t('deck.untitled')}
+            cardCount={stage.cards.length}
+            prefs={prefs}
+            session={session}
+            discardedRound={discardedRound}
+            onStart={beginRound}
+            onResume={() => setStudying(true)}
+            onRestart={beginRound}
+            onPrefs={updatePrefs}
+          />
+        ) : session && isFinished(session) ? (
           <Result
             session={session}
             cards={stage.cards}
             onRetryWrong={retryMisses}
             onRestart={restart}
-            onHome={goHome}
+            onBackToDeck={() => setStudying(false)}
           />
-        ) : (
+        ) : session ? (
           <Quiz
             session={session}
             cards={stage.cards}
             swipeEnabled={settings.swipeEnabled}
-            resumed={resumed}
             onAnswer={onAnswer}
           />
-        )
+        ) : null
       ) : null}
 
       {sheet === 'settings' ? (
         <SettingsSheet
           settings={settings}
-          prefs={prefs}
-          deckSize={cards?.length ?? 0}
           onSettings={updateSettings}
-          onPrefs={updatePrefs}
           onClose={() => setSheet('none')}
         />
       ) : null}

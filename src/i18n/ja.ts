@@ -4,9 +4,10 @@ export default {
 
   'common.back': '戻る',
   'common.close': '閉じる',
-  'common.start': '開始',
   'common.loading': '読み込み中',
   'common.retry': 'もう一度',
+  'common.home': 'ホームへ',
+  'common.install': 'インストール',
   'common.settings': '設定',
 
   'landing.pasteLabel': 'Google スプレッドシートのリンクを貼り付け',
@@ -54,7 +55,6 @@ export default {
   'quiz.tapHint': 'カードをタップで裏返す',
   'quiz.swipeHint': '右スワイプでわかった、左スワイプでわからない',
   'quiz.keyHint': 'スペースでめくる、1 わかった、2 わからない',
-  'quiz.resumed': '前回の続きから再開しました',
 
   'result.done': 'このラウンドは終了',
   'result.perfect': '全問正解',
@@ -62,8 +62,13 @@ export default {
   'result.wrongTitle.other': '間違えた {n} 枚',
   'result.retryWrong': '間違えた分だけ',
   'result.restart': '最初から',
-  'result.backHome': 'ホームへ',
+  'result.backToDeck': 'デッキへ戻る',
   'result.ephemeralNote': 'この結果は保存されません。閉じると消えます。',
+
+  'deckHome.start': '開始',
+  'deckHome.resume': '続きから {current} / {total}',
+  'deckHome.restart': '最初から',
+  'deckHome.discarded': '設定を変更したため、途中のラウンドは破棄されました。',
 
   'settings.title': '設定',
   'settings.language': '言語',

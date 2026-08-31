@@ -287,6 +287,19 @@ p {
   background: var(--bad-soft);
 }
 
+/* ----------------------------------------------------------------- deck home */
+
+.deck-headline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deck-headline h2 {
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
 /* ------------------------------------------------------------------- landing */
 
 .row-list {

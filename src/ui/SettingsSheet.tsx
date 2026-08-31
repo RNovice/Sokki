@@ -1,29 +1,22 @@
 import { THEME_NAMES } from '../theme/apply'
-import type { DeckPrefs, Direction, Locale, Settings, ThemeName } from '../core/types'
+import type { Locale, Settings, ThemeName } from '../core/types'
 import { t } from '../i18n'
 import { useEscapeToClose } from './CardModal'
 import { SelectField, ToggleField } from './Field'
 import { Icon } from './Icon'
 
-const DIRECTIONS: Direction[] = ['front-back', 'back-front', 'mixed']
-
 interface Props {
   settings: Settings
-  prefs: DeckPrefs | null
-  deckSize: number
   onSettings: (patch: Partial<Settings>) => void
-  onPrefs: (patch: Partial<DeckPrefs>) => void
   onClose: () => void
 }
 
-export function SettingsSheet({
-  settings,
-  prefs,
-  deckSize,
-  onSettings,
-  onPrefs,
-  onClose,
-}: Props) {
+/**
+ * Only what belongs to the person: language, theme, whether swipe is on.
+ * Anything that shapes a round lives on the deck's own screen, where choosing
+ * it cannot destroy a round already under way.
+ */
+export function SettingsSheet({ settings, onSettings, onClose }: Props) {
   useEscapeToClose(onClose)
 
   return (
@@ -72,45 +65,6 @@ export function SettingsSheet({
           />
         </div>
 
-        {prefs ? (
-          <>
-            <span class="section-label">{t('settings.deckSection')}</span>
-            <div class="field-group">
-              <SelectField
-                label={t('settings.direction')}
-                value={prefs.direction}
-                onChange={(value) => onPrefs({ direction: value as Direction })}
-              >
-                {DIRECTIONS.map((d) => (
-                  <option key={d} value={d}>
-                    {t(`direction.${d}`)}
-                  </option>
-                ))}
-              </SelectField>
-
-              <SelectField
-                label={t('settings.count')}
-                value={String(prefs.count)}
-                onChange={(value) => onPrefs({ count: Number(value) })}
-              >
-                <option value="0">{t('settings.countAll')}</option>
-                {[10, 20, 30, 50, 100]
-                  .filter((n) => n < deckSize)
-                  .map((n) => (
-                    <option key={n} value={String(n)}>
-                      {n}
-                    </option>
-                  ))}
-              </SelectField>
-
-              <ToggleField
-                label={t('settings.shuffle')}
-                checked={prefs.shuffle}
-                onChange={(checked) => onPrefs({ shuffle: checked })}
-              />
-            </div>
-          </>
-        ) : null}
       </div>
     </div>
   )

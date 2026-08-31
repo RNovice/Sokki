@@ -74,11 +74,10 @@ interface Props {
   session: Session
   cards: Card[]
   swipeEnabled: boolean
-  resumed: boolean
   onAnswer: (knew: boolean) => void
 }
 
-export function Quiz({ session, cards, swipeEnabled, resumed, onAnswer }: Props) {
+export function Quiz({ session, cards, swipeEnabled, onAnswer }: Props) {
   /**
    * Which side is up, tagged with the card it belongs to.
    *
@@ -363,9 +362,7 @@ export function Quiz({ session, cards, swipeEnabled, resumed, onAnswer }: Props)
           </button>
         </div>
         <div class="hint-line">
-          {resumed
-            ? t('quiz.resumed')
-            : hasFlipped
+          {hasFlipped
               ? swipeEnabled
                 ? t('quiz.swipeHint')
                 : t('quiz.keyHint')

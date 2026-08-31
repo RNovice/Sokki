@@ -4,9 +4,10 @@ export default {
 
   'common.back': 'Back',
   'common.close': 'Close',
-  'common.start': 'Start',
   'common.loading': 'Loading',
   'common.retry': 'Try again',
+  'common.home': 'Home',
+  'common.install': 'Install',
   'common.settings': 'Settings',
 
   'landing.pasteLabel': 'Paste a Google Sheets link',
@@ -56,7 +57,6 @@ export default {
   'quiz.tapHint': 'Tap the card to turn it over',
   'quiz.swipeHint': 'Swipe right if you knew it, left if you did not',
   'quiz.keyHint': 'Space flips, 1 knew it, 2 did not',
-  'quiz.resumed': 'Picked up where you left off',
 
   'result.done': 'Round finished',
   'result.perfect': 'All correct',
@@ -65,8 +65,13 @@ export default {
   'result.wrongTitle.other': '{n} you missed',
   'result.retryWrong': 'Retry the misses',
   'result.restart': 'Start over',
-  'result.backHome': 'Home',
+  'result.backToDeck': 'Back to deck',
   'result.ephemeralNote': 'None of this is saved. Close the tab and it is gone.',
+
+  'deckHome.start': 'Start',
+  'deckHome.resume': 'Continue {current} / {total}',
+  'deckHome.restart': 'Start over',
+  'deckHome.discarded': 'Settings changed, so the unfinished round was dropped.',
 
   'settings.title': 'Settings',
   'settings.language': 'Language',

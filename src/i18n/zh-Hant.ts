@@ -4,9 +4,10 @@ export default {
 
   'common.back': '返回',
   'common.close': '關閉',
-  'common.start': '開始',
   'common.loading': '載入中',
   'common.retry': '重試',
+  'common.home': '回首頁',
+  'common.install': '安裝',
   'common.settings': '設定',
 
   'landing.pasteLabel': '貼上 Google Sheets 連結',
@@ -54,7 +55,6 @@ export default {
   'quiz.tapHint': '點卡片翻到背面',
   'quiz.swipeHint': '右滑代表會了，左滑代表還不會',
   'quiz.keyHint': '空白鍵翻面，1 我會，2 我不會',
-  'quiz.resumed': '接續上次未完成的測驗',
 
   'result.done': '這一輪結束',
   'result.perfect': '全部答對',
@@ -62,8 +62,13 @@ export default {
   'result.wrongTitle.other': '答錯的 {n} 張',
   'result.retryWrong': '只測答錯的',
   'result.restart': '重新開始',
-  'result.backHome': '回首頁',
+  'result.backToDeck': '回到卡組',
   'result.ephemeralNote': '這些結果不會被保存。關掉就沒了。',
+
+  'deckHome.start': '開始',
+  'deckHome.resume': '繼續 {current} / {total}',
+  'deckHome.restart': '重新開始',
+  'deckHome.discarded': '設定已變更，未完成的回合已捨棄。',
 
   'settings.title': '設定',
   'settings.language': '語言',

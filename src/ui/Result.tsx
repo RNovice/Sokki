@@ -7,7 +7,7 @@ interface Props {
   cards: Card[]
   onRetryWrong: () => void
   onRestart: () => void
-  onHome: () => void
+  onBackToDeck: () => void
 }
 
 /**
@@ -16,7 +16,7 @@ interface Props {
  * just failed, without being asked, is how a drill starts to feel like a
  * punishment.
  */
-export function Result({ session, cards, onRetryWrong, onRestart, onHome }: Props) {
+export function Result({ session, cards, onRetryWrong, onRestart, onBackToDeck }: Props) {
   const total = session.order.length
   const missed = session.wrong
 
@@ -61,8 +61,11 @@ export function Result({ session, cards, onRetryWrong, onRestart, onHome }: Prop
         <button class={missed.length > 0 ? '' : 'primary'} onClick={onRestart}>
           {t('result.restart')}
         </button>
-        <button class="quiet" onClick={onHome}>
-          {t('result.backHome')}
+        {/* Back to the deck, not to the home page: somebody who arrived from a
+            shared link has never seen the home page, and sending them there
+            shows them a form for pasting a link they already have. */}
+        <button class="quiet" onClick={onBackToDeck}>
+          {t('result.backToDeck')}
         </button>
       </div>
     </div>

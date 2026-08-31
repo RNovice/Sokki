@@ -25,7 +25,7 @@ export function Banners({ hasDeck }: { hasDeck: boolean }) {
        */}
       {sourceChanged && !offline ? <Bar text={t('banner.updated')} /> : null}
       {install && hasDeck && !offline ? (
-        <Bar text={t('banner.install')} action={{ label: t('common.start'), onClick: install }} />
+        <Bar text={t('banner.install')} action={{ label: t('common.install'), onClick: install }} />
       ) : null}
     </>
   )
