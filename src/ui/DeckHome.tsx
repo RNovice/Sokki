@@ -1,4 +1,4 @@
-import { isFinished } from '../core/session'
+import { isFinished, roundSize } from '../core/session'
 import type { DeckPrefs, Direction, Session } from '../core/types'
 import { t, tp } from '../i18n'
 import { SelectField, ToggleField } from './Field'
@@ -10,8 +10,8 @@ interface Props {
   cardCount: number
   prefs: DeckPrefs
   session: Session | null
-  /** A one-off note about something that just happened to this deck. */
-  notice: 'discarded' | 'refreshed' | null
+  /** Shown once, after the cards were re-read because the source moved. */
+  justRefreshed: boolean
   onStart: () => void
   onResume: () => void
   onRestart: () => void
@@ -37,7 +37,7 @@ export function DeckHome({
   cardCount,
   prefs,
   session,
-  notice,
+  justRefreshed,
   onStart,
   onResume,
   onRestart,
@@ -49,6 +49,22 @@ export function DeckHome({
    * and offering to continue it says there is progress where there is none.
    */
   const unfinished = session && !isFinished(session) && session.pos > 0 ? session : null
+
+  /*
+   * Whether the settings on screen would build a different round from the one
+   * waiting to be resumed. A round carries its own direction and its size was
+   * fixed when it was built, so changing these does not disturb it — but the
+   * reader has just changed something and is entitled to know it takes effect
+   * next time rather than now.
+   *
+   * Shuffle is not compared: an order cannot be inspected to tell whether it
+   * was shuffled, and storing the flag purely to power a note is not worth
+   * changing what a saved round looks like.
+   */
+  const settingsDiffer =
+    unfinished != null &&
+    (unfinished.direction !== prefs.direction ||
+      unfinished.order.length !== roundSize(cardCount, prefs.count))
 
   return (
     <div class="page">
@@ -75,13 +91,15 @@ export function DeckHome({
         </div>
       )}
 
-      {notice ? (
-        <div class={notice === 'refreshed' ? 'notice info' : 'notice'}>
-          {/* Named outright rather than built from `notice`, so a search for
-              either key finds its use and the i18n check can see it. */}
-          <span>
-            {notice === 'refreshed' ? t('deckHome.refreshed') : t('deckHome.discarded')}
-          </span>
+      {settingsDiffer ? (
+        <div class="notice">
+          <span>{t('deckHome.settingsNextRound')}</span>
+        </div>
+      ) : null}
+
+      {justRefreshed ? (
+        <div class="notice info">
+          <span>{t('deckHome.refreshed')}</span>
         </div>
       ) : null}
 

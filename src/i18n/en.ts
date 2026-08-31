@@ -71,7 +71,7 @@ export default {
   'deckHome.start': 'Start',
   'deckHome.resume': 'Continue {current} / {total}',
   'deckHome.restart': 'Start over',
-  'deckHome.discarded': 'Settings changed, so the unfinished round was dropped.',
+  'deckHome.settingsNextRound': 'This round keeps the settings it started with. The new ones apply to the next.',
   'deckHome.refreshed': 'Loaded the latest content from the sheet.',
 
   'settings.title': 'Settings',

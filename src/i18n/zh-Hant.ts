@@ -68,7 +68,7 @@ export default {
   'deckHome.start': '開始',
   'deckHome.resume': '繼續 {current} / {total}',
   'deckHome.restart': '重新開始',
-  'deckHome.discarded': '設定已變更，未完成的回合已捨棄。',
+  'deckHome.settingsNextRound': '這一輪仍使用原本的設定，新設定會在下一輪生效。',
   'deckHome.refreshed': '已讀取試算表的最新內容。',
 
   'settings.title': '設定',

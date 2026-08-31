@@ -74,8 +74,6 @@ export function App() {
   const [prefs, setPrefs] = useState<DeckPrefs | null>(null)
   /** False means the deck's own home screen; true means a round is under way. */
   const [studying, setStudying] = useState(false)
-  /** Shown once, when changing a setting threw away a round in progress. */
-  const [discardedRound, setDiscardedRound] = useState(false)
   /** Shown once, after the cards were re-read because the source moved. */
   const [justRefreshed, setJustRefreshed] = useState(false)
   const [sourceChanged, clearSourceChanged] = useSourceChanged()
@@ -124,7 +122,6 @@ export function App() {
       // after the source moved re-ran the whole open sequence and wiped the
       // very notice that said it had been re-read.
       setPrefs(loadPrefs(deckKeyForRef))
-      setDiscardedRound(false)
       setJustRefreshed(false)
       // Restored, not resumed: an interrupted round is offered on the deck's
       // home screen rather than dropping the reader into a card they did not
@@ -176,7 +173,6 @@ export function App() {
    * them just as starting a fresh one does.
    */
   const enterQuiz = useCallback(() => {
-    setDiscardedRound(false)
     setJustRefreshed(false)
     setStudying(true)
   }, [])
@@ -205,16 +201,13 @@ export function App() {
       const next = { ...prefs, ...patch }
       setPrefs(next)
       savePrefs(key, next)
-      // These settings decide how a round is built, so a round already under
-      // way no longer matches them and is dropped. It used to be dropped
-      // silently mid-quiz; now it can only happen from the deck's home screen,
-      // and the screen says so.
-      const hadRound = session != null && !isFinished(session)
-      clearSession(key)
-      setSession(null)
-      setDiscardedRound(hadRound)
+      // The round in progress is left alone. It carries its own direction, and
+      // its size and order were fixed when it was built, so it does not depend
+      // on these values at all — the round used to be thrown away here to keep
+      // it "consistent" with settings it never read. The deck screen points out
+      // when the two differ; the next round picks the new values up.
     },
-    [key, prefs, session],
+    [key, prefs],
   )
 
   /* ------------------------------------------------------- source refresh */
@@ -321,7 +314,7 @@ export function App() {
             cardCount={stage.cards.length}
             prefs={prefs}
             session={session}
-            notice={discardedRound ? 'discarded' : justRefreshed ? 'refreshed' : null}
+            justRefreshed={justRefreshed}
             onStart={beginRound}
             onResume={enterQuiz}
             onRestart={beginRound}

@@ -32,14 +32,25 @@ function shuffled(length: number): number[] {
 }
 
 /**
+ * How many cards a round will hold. Zero means the whole deck, and a count
+ * larger than the deck is capped rather than refused.
+ *
+ * Exported because the deck screen needs the same answer to tell whether the
+ * settings on display would build a different round from the one in progress,
+ * and two copies of this rule would eventually disagree.
+ */
+export function roundSize(total: number, count: number): number {
+  return count > 0 ? Math.min(count, total) : total
+}
+
+/**
  * Pick the cards for a round. With no persistence there is no way to avoid
  * repeating what came up last time — this is a random draw, and the interface
  * says so rather than implying a schedule.
  */
 export function buildOrder(total: number, count: number, shuffle: boolean): number[] {
   const all = shuffle ? shuffled(total) : Array.from({ length: total }, (_, i) => i)
-  const wanted = count > 0 ? Math.min(count, total) : total
-  return all.slice(0, wanted)
+  return all.slice(0, roundSize(total, count))
 }
 
 export function startSession(

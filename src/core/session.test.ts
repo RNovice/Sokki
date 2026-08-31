@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   answer,
   buildOrder,
+  roundSize,
   clearSession,
   currentIndex,
   facesFor,
@@ -19,6 +20,28 @@ const KEY = 'test:deck'
 
 beforeEach(() => {
   localStorage.clear()
+})
+
+describe('roundSize', () => {
+  // Shared with the deck screen, which uses it to tell whether the settings on
+  // display would build a different round from the one waiting to be resumed.
+  it('treats zero as the whole deck', () => {
+    expect(roundSize(47, 0)).toBe(47)
+  })
+
+  it('caps a count larger than the deck', () => {
+    expect(roundSize(5, 100)).toBe(5)
+  })
+
+  it('takes the count when it fits', () => {
+    expect(roundSize(47, 20)).toBe(20)
+  })
+
+  it('agrees with the order buildOrder actually produces', () => {
+    for (const [total, count] of [[47, 0], [47, 20], [5, 100], [0, 10]] as const) {
+      expect(buildOrder(total, count, true)).toHaveLength(roundSize(total, count))
+    }
+  })
 })
 
 describe('buildOrder', () => {

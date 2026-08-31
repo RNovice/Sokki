@@ -68,7 +68,7 @@ export default {
   'deckHome.start': '開始',
   'deckHome.resume': '続きから {current} / {total}',
   'deckHome.restart': '最初から',
-  'deckHome.discarded': '設定を変更したため、途中のラウンドは破棄されました。',
+  'deckHome.settingsNextRound': 'このラウンドは開始時の設定のままです。新しい設定は次のラウンドから反映されます。',
   'deckHome.refreshed': 'シートの最新の内容を読み込みました。',
 
   'settings.title': '設定',
