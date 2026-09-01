@@ -15,6 +15,12 @@
  *                        rounding them here would round them twice and clip
  *                        the result.
  *
+ * Also emits the 1200x630 share image. It carries no text: the preview card
+ * already shows the title beside it, so lettering would only repeat it — and
+ * the encoder here has no font, which is a constraint that happens to agree.
+ * What it does carry is a suggestion of writing on the front card, so the shape
+ * reads as a flashcard rather than as two abstract rectangles.
+ *
  *   node scripts/make-icons.mjs
  */
 
@@ -66,18 +72,18 @@ function chunk(type, data) {
 }
 
 /** `pixels` is RGBA, four bytes per pixel. */
-function encodePng(size, pixels) {
+function encodePng(width, height, pixels) {
   const ihdr = Buffer.alloc(13)
-  ihdr.writeUInt32BE(size, 0)
-  ihdr.writeUInt32BE(size, 4)
+  ihdr.writeUInt32BE(width, 0)
+  ihdr.writeUInt32BE(height, 4)
   ihdr[8] = 8 // bit depth
   ihdr[9] = 6 // truecolour with alpha
-  const raw = Buffer.alloc(size * (size * 4 + 1))
+  const raw = Buffer.alloc(height * (width * 4 + 1))
   let o = 0
-  for (let y = 0; y < size; y++) {
+  for (let y = 0; y < height; y++) {
     raw[o++] = 0 // filter: none
-    pixels.copy(raw, o, y * size * 4, (y + 1) * size * 4)
-    o += size * 4
+    pixels.copy(raw, o, y * width * 4, (y + 1) * width * 4)
+    o += width * 4
   }
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
@@ -169,7 +175,62 @@ function render(size, { rounded }) {
     }
   }
 
-  return encodePng(size, pixels)
+  return encodePng(size, size, pixels)
+}
+
+/* ------------------------------------------------------------ share image */
+
+/**
+ * Laid out in pixels rather than unit coordinates: the canvas is not square, so
+ * a single fraction would stretch differently on each axis.
+ */
+function renderShareImage(width, height) {
+  const BACK = { left: 450, top: 120, right: 830, bottom: 420, radius: 26 }
+  const FRONT = { left: 370, top: 200, right: 750, bottom: 500, radius: 26 }
+  // Lines of writing on the front card, ragged like real text.
+  const LINES = [
+    { left: 410, top: 250, right: 710, bottom: 272, radius: 11 },
+    { left: 410, top: 300, right: 660, bottom: 322, radius: 11 },
+    { left: 410, top: 350, right: 560, bottom: 372, radius: 11 },
+  ]
+
+  const pixels = Buffer.alloc(width * height * 4)
+  const step = 1 / SUPERSAMPLE
+  const half = step / 2
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let r = 0
+      let g = 0
+      let b = 0
+      let n = 0
+
+      for (let sy = 0; sy < SUPERSAMPLE; sy++) {
+        for (let sx = 0; sx < SUPERSAMPLE; sx++) {
+          const u = x + sx * step + half
+          const v = y + sy * step + half
+          let colour = GROUND
+          if (inRoundedRect(u, v, FRONT)) {
+            colour = LINES.some((line) => inRoundedRect(u, v, line)) ? GROUND : CARD_FRONT
+          } else if (inRoundedRect(u, v, BACK)) {
+            colour = CARD_BACK
+          }
+          r += colour[0]
+          g += colour[1]
+          b += colour[2]
+          n++
+        }
+      }
+
+      const i = (y * width + x) * 4
+      pixels[i] = Math.round(r / n)
+      pixels[i + 1] = Math.round(g / n)
+      pixels[i + 2] = Math.round(b / n)
+      pixels[i + 3] = 255
+    }
+  }
+
+  return encodePng(width, height, pixels)
 }
 
 mkdirSync(OUT_DIR, { recursive: true })
@@ -183,3 +244,7 @@ for (const size of [192, 512]) {
 const maskable = join(OUT_DIR, 'icon-maskable-512.png')
 writeFileSync(maskable, render(512, { rounded: false }))
 console.log(`wrote ${maskable}`)
+
+const share = join(OUT_DIR, 'og.png')
+writeFileSync(share, renderShareImage(1200, 630))
+console.log(`wrote ${share}`)

@@ -19,6 +19,22 @@ const localizedManifest: Record<string, unknown> = {
   description_localized: { en: en['app.tagline'], ja: ja['app.tagline'] },
 }
 
+/**
+ * Open Graph wants absolute URLs, and a static build does not know where it
+ * will be served from. VITE_SITE_ORIGIN supplies it; without one the URLs are
+ * left relative, which most crawlers resolve anyway but none promise to.
+ */
+function siteOrigin() {
+  const origin = (process.env.VITE_SITE_ORIGIN ?? '').replace(/\/$/, '')
+  if (!origin) {
+    console.warn(
+      '\n  VITE_SITE_ORIGIN is not set: og:image and og:url will be relative.' +
+        '\n  Link previews are more reliable with an absolute URL.\n',
+    )
+  }
+  return origin
+}
+
 export default defineConfig({
   base: process.env.BASE_PATH ?? '/',
   resolve: {
@@ -31,6 +47,13 @@ export default defineConfig({
     },
   },
   plugins: [
+    {
+      name: 'site-origin',
+      transformIndexHtml: {
+        order: 'pre',
+        handler: (html) => html.replaceAll('%SITE_ORIGIN%', siteOrigin()),
+      },
+    },
     preact(),
     VitePWA({
       registerType: 'autoUpdate',

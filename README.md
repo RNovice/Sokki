@@ -54,6 +54,16 @@ have should say so rather than answer with the app.
 script hash is computed at build time by `scripts/seal-csp.mjs` — editing the
 inline theme script cannot leave the policy stale.
 
+Set `VITE_SITE_ORIGIN` in the build environment to the deployed origin. It makes
+`og:url` and `og:image` absolute; a link preview with a relative image is at the
+mercy of whether a given crawler resolves it.
+
+`npm run og` reads the link preview from a running build and checks what the
+crawlers silently drop a preview over — a missing image, a relative URL, wrong
+dimensions. The public validators fetch from their own servers and cannot see
+localhost, so reach for `cloudflared tunnel --url http://localhost:4173` when you
+want to see the card itself rather than its parts.
+
 Turn on Web Analytics in the dashboard for traffic and Core Web Vitals. It sets
 no cookie and no identifier, so it needs no consent banner and does not
 contradict the promise above. The CSP already allows its beacon.
