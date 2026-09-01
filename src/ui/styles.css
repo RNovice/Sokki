@@ -113,6 +113,29 @@ a {
   touch-action: manipulation;
 }
 
+/*
+ * Chrome you would never copy: control labels, counters, hints. Selecting them
+ * only produces a stray highlight when a tap is held a moment too long.
+ *
+ * What is left selectable is deliberate. The result screen's list of missed
+ * cards is card content — looking a word up elsewhere is a real thing to want —
+ * and so is the prose in the help modal and the share URL. The quiz card is the
+ * one piece of content that is not selectable, and that is a gesture decision
+ * rather than this one: a long-press-and-drag to select would fight the drag
+ * that answers the card.
+ */
+button,
+.progress,
+.hint-line,
+.section-label,
+.label-text,
+.toggle,
+.banner,
+.deck-headline .muted {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 button {
   font: inherit;
   font-weight: 500;

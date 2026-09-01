@@ -87,6 +87,28 @@ describe('iOS zoom', () => {
   })
 })
 
+describe('text selection', () => {
+  const LOCKED = 'button,\n.progress,\n.hint-line,\n.section-label,\n.label-text,\n.toggle,\n.banner,\n.deck-headline .muted'
+
+  it('locks the chrome nobody would copy', () => {
+    expect(block(LOCKED)).toMatch(/user-select:\s*none/)
+    expect(block(LOCKED)).toMatch(/-webkit-user-select:\s*none/)
+  })
+
+  it('leaves card content copyable where no gesture is competing for it', () => {
+    // The result screen lists the cards that were missed, and looking one of
+    // them up elsewhere is a real thing to want. Locking it would be applying
+    // the rule past the point it was meant for.
+    expect(DECLARATIONS).not.toMatch(/\.wrong-list[^{]*\{[^}]*user-select/)
+    expect(DECLARATIONS).not.toMatch(/\.card-body[^{]*\{[^}]*user-select/)
+  })
+
+  it('locks the quiz card, which is a gesture decision rather than this one', () => {
+    // A long-press-and-drag to select would fight the drag that answers.
+    expect(block('.card')).toMatch(/user-select:\s*none/)
+  })
+})
+
 describe('touch targets', () => {
   it('keeps the rating buttons at the minimum comfortable size', () => {
     expect(block('.answers button')).toMatch(/min-height:\s*var\(--tap\)/)
