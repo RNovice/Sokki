@@ -1,6 +1,23 @@
 import { defineConfig } from 'vite'
 import preact from '@preact/preset-vite'
 import { VitePWA } from 'vite-plugin-pwa'
+// Read from the same place the interface reads them, so the installed app's
+// name cannot drift from the one inside it.
+import en from './src/i18n/en'
+import ja from './src/i18n/ja'
+import zhHant from './src/i18n/zh-Hant'
+
+/**
+ * The `*_localized` manifest members are newer than vite-plugin-pwa's types, so
+ * they are spread in rather than written inline — a spread skips the excess
+ * property check, where casting the whole manifest would hide real mistakes in
+ * the fields the types do know about.
+ */
+const localizedManifest: Record<string, unknown> = {
+  name_localized: { en: en['app.name'], ja: ja['app.name'] },
+  short_name_localized: { en: en['app.name'], ja: ja['app.name'] },
+  description_localized: { en: en['app.tagline'], ja: ja['app.tagline'] },
+}
 
 export default defineConfig({
   base: process.env.BASE_PATH ?? '/',
@@ -19,9 +36,16 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png'],
       manifest: {
-        name: '速記卡',
-        short_name: '速記卡',
-        description: '把 Google Sheet 變成速記卡。不需要帳號，不保存你的任何資料。',
+        /*
+         * `lang` names what the unprefixed values are written in; the localized
+         * variants carry the rest. A browser without support falls back to the
+         * unprefixed value by itself, so this is additive — nothing to feature
+         * detect and nothing to break. Chrome and Edge read it from 148.
+         */
+        ...localizedManifest,
+        name: zhHant['app.name'],
+        short_name: zhHant['app.name'],
+        description: zhHant['app.tagline'],
         lang: 'zh-Hant',
         start_url: '.',
         scope: '.',
