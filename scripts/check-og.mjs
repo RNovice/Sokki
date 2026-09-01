@@ -4,7 +4,8 @@
  * The public validators — Facebook's debugger, LINE's, Slack's unfurler — all
  * fetch the page from their own servers, so none of them can see localhost.
  * This reads the same tags they would and checks the things they silently drop
- * a preview over: a missing image, a relative URL, wrong dimensions.
+ * a preview over: a relative image URL, wrong dimensions, or a card type that
+ * promises an image the page does not have.
  *
  *   npm run preview            # in one shell
  *   npm run og                 # in another
@@ -67,12 +68,26 @@ function pngSize(buffer) {
 const problems = []
 const notes = []
 
-const required = ['og:title', 'og:description', 'og:image', 'og:type', 'og:url']
+const required = ['og:title', 'og:description', 'og:type', 'og:url']
 for (const key of required) {
   if (!meta.has(key)) problems.push(`${key} is missing`)
 }
 
 const imageUrl = meta.get('og:image')
+const cardType = meta.get('twitter:card')
+
+if (!imageUrl) {
+  // Not a fault. An image identical for every link carries nothing, and a large
+  // one displaces the description. But the card type has to agree.
+  notes.push('No og:image, so previews will be the compact text form.')
+  if (cardType === 'summary_large_image') {
+    problems.push(
+      'twitter:card is summary_large_image but there is no og:image; ' +
+        'use `summary`, or the card may not render at all.',
+    )
+  }
+}
+
 let image = null
 if (imageUrl) {
   if (!/^https?:\/\//i.test(imageUrl)) {
@@ -128,8 +143,10 @@ if (description.includes('\n')) {
 if (description.length > 200) {
   notes.push(`og:description is ${description.length} characters; most clients cut around 160.`)
 }
-if (!meta.has('twitter:card')) {
+if (!cardType) {
   notes.push('twitter:card is absent; X and some others fall back to a small preview.')
+} else if (cardType === 'summary' && imageUrl) {
+  notes.push('twitter:card is `summary`, so the image shows small and square.')
 }
 
 /* ------------------------------------------------------------------ print */
