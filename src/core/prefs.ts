@@ -24,13 +24,13 @@ const THEMES: readonly (ThemeName | 'system')[] = [
   'light',
   'dark',
   'sepia',
-  'forest',
-  'ocean',
-  'plum',
-  'sand',
-  'slate',
-  'rose',
-  'mono',
+  'sakura',
+  'coral',
+  'steel',
+  'terminal',
+  'amber',
+  'dracula',
+  'matcha',
 ]
 const DIRECTIONS: readonly Direction[] = ['front-back', 'back-front', 'mixed']
 
@@ -38,15 +38,21 @@ export function isLocale(value: unknown): value is Locale {
   return typeof value === 'string' && (LOCALES as readonly string[]).includes(value)
 }
 
+/**
+ * Note what is *not* checked here: whether the theme still exists. A theme that
+ * has been removed must not invalidate the whole record — falling through to
+ * the defaults would reset the reader's language and swipe preference too, and
+ * neither of those has anything to do with a palette going away. loadSettings
+ * resolves the theme separately, below.
+ */
 function isSettings(value: unknown): value is Settings {
   if (typeof value !== 'object' || value === null) return false
   const s = value as Partial<Settings>
-  return (
-    isLocale(s.locale) &&
-    typeof s.theme === 'string' &&
-    (THEMES as readonly string[]).includes(s.theme) &&
-    typeof s.swipeEnabled === 'boolean'
-  )
+  return isLocale(s.locale) && typeof s.theme === 'string' && typeof s.swipeEnabled === 'boolean'
+}
+
+function isTheme(value: unknown): value is ThemeName | 'system' {
+  return typeof value === 'string' && (THEMES as readonly string[]).includes(value)
 }
 
 function isPrefs(value: unknown): value is DeckPrefs {
@@ -81,8 +87,10 @@ export function detectLocale(): Locale {
 
 export function loadSettings(): Settings {
   const saved = readJson('settings', isSettings)
-  if (saved) return saved
-  return { ...DEFAULT_SETTINGS, locale: detectLocale() }
+  if (!saved) return { ...DEFAULT_SETTINGS, locale: detectLocale() }
+  // A theme that no longer exists resolves to "match system" and takes nothing
+  // else with it.
+  return isTheme(saved.theme) ? saved : { ...saved, theme: 'system' }
 }
 
 export function saveSettings(settings: Settings): void {

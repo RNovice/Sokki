@@ -61,15 +61,23 @@ Google スプレッドシートをフラッシュカードに。"
         try {
           var saved = localStorage.getItem('sokki:settings')
           var theme = saved ? JSON.parse(saved).theme : 'system'
-          if (theme && theme !== 'system') {
+          var colors = {
+            light: '#f6f7f5', dark: '#0f1315', sepia: '#f2e9d7', sakura: '#fcd9e8',
+            coral: '#ece7e3', steel: '#e7ecf1', terminal: '#080b09', amber: '#f9c294',
+            dracula: '#221b33', matcha: '#dfe9c8'
+          }
+          /*
+           * The map is the validity check as well as the colour source. A theme
+           * that has since been removed would otherwise be stamped onto <html>
+           * with no rules behind it, painting the light palette for one frame
+           * before the app resolves it back to "match system" — which is a
+           * flash of white on a dark screen, the exact thing this script exists
+           * to prevent.
+           */
+          if (theme && colors[theme]) {
             document.documentElement.setAttribute('data-theme', theme)
-            var colors = {
-              light: '#f6f7f5', dark: '#0f1315', sepia: '#f2e9d7', forest: '#0f1611',
-              ocean: '#edf2f7', plum: '#16101a', sand: '#f7f3ec', slate: '#12161a',
-              rose: '#f9eff1', mono: '#ffffff'
-            }
             var meta = document.querySelector('meta[name="theme-color"]')
-            if (meta && colors[theme]) meta.content = colors[theme]
+            if (meta) meta.content = colors[theme]
           } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
             var m = document.querySelector('meta[name="theme-color"]')
             if (m) m.content = '#0f1315'

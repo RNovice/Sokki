@@ -30,13 +30,13 @@ export type ThemeName =
   | 'light'
   | 'dark'
   | 'sepia'
-  | 'forest'
-  | 'ocean'
-  | 'plum'
-  | 'sand'
-  | 'slate'
-  | 'rose'
-  | 'mono'
+  | 'sakura'
+  | 'coral'
+  | 'steel'
+  | 'terminal'
+  | 'amber'
+  | 'dracula'
+  | 'matcha'
 
 /** Global, and genuinely global: nobody changes language per deck. */
 export interface Settings {

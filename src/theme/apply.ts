@@ -22,13 +22,13 @@ const THEME_COLORS: Record<ThemeName, string> = {
   light: '#f6f7f5',
   dark: '#0f1315',
   sepia: '#f2e9d7',
-  forest: '#0f1611',
-  ocean: '#edf2f7',
-  plum: '#16101a',
-  sand: '#f7f3ec',
-  slate: '#12161a',
-  rose: '#f9eff1',
-  mono: '#ffffff',
+  sakura: '#fcd9e8',
+  coral: '#ece7e3',
+  steel: '#e7ecf1',
+  terminal: '#080b09',
+  amber: '#f9c294',
+  dracula: '#221b33',
+  matcha: '#dfe9c8',
 }
 
 export const THEME_NAMES = Object.keys(THEME_COLORS) as ThemeName[]

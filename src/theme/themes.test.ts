@@ -106,6 +106,9 @@ describe('contrast', () => {
     // colour itself.
     ['--good-ink', '--good', 'the armed "knew it" button'],
     ['--bad-ink', '--bad', 'the armed "did not know" button'],
+    // The error notice is the one place a soft tint is a text background
+    // rather than a wash behind a card, so it is a text pairing too.
+    ['--ink', '--bad-soft', 'the text of an error notice'],
   ]
 
   it.each(THEME_NAMES)('%s passes AA on every text pairing', (theme) => {

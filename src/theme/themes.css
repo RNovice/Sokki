@@ -17,12 +17,12 @@
   --ink: #14181c;
   --muted: #5b646a;
   --hairline: #dbdfdb;
-  --accent: #2f6f6a;
+  --accent: #111111;
   --accent-ink: #ffffff;
-  --good: #2c6b4f;
-  --good-soft: #dcede4;
-  --bad: #9c3a3a;
-  --bad-soft: #f4e0e0;
+  --good: #0b7a42;
+  --good-soft: #cfeeda;
+  --bad: #c62828;
+  --bad-soft: #fbdcdc;
   --good-ink: #ffffff;
   --bad-ink: #ffffff;
 }
@@ -53,12 +53,12 @@
   --ink: #14181c;
   --muted: #5b646a;
   --hairline: #dbdfdb;
-  --accent: #2f6f6a;
+  --accent: #111111;
   --accent-ink: #ffffff;
-  --good: #2c6b4f;
-  --good-soft: #dcede4;
-  --bad: #9c3a3a;
-  --bad-soft: #f4e0e0;
+  --good: #0b7a42;
+  --good-soft: #cfeeda;
+  --bad: #c62828;
+  --bad-soft: #fbdcdc;
   --good-ink: #ffffff;
   --bad-ink: #ffffff;
 }
@@ -97,121 +97,162 @@
   --bad-ink: #faf4e6;
 }
 
-:root[data-theme='forest'] {
-  --bg: #0f1611;
-  --surface: #16201a;
-  --raised: #1c2820;
-  --ink: #e2ebe4;
-  --muted: #94a799;
-  --hairline: #283730;
-  --accent: #6fbf8a;
-  --accent-ink: #08130c;
-  --good: #7fca8f;
-  --good-soft: #16281a;
-  --bad: #dd8f84;
-  --bad-soft: #2a1a17;
-  --good-ink: #0f1611;
-  --bad-ink: #0f1611;
-}
-
-:root[data-theme='ocean'] {
-  --bg: #edf2f7;
-  --surface: #f7fafd;
-  --raised: #ffffff;
-  --ink: #121a22;
-  --muted: #54626f;
-  --hairline: #cfd9e4;
-  --accent: #1f5f92;
+/*
+ * 少女風. A blush that is a colour rather than a tint of white — chroma 35
+ * against the 10 the old pink ground carried. Ink is deep plum, not black:
+ * nothing on this page should be hard.
+ */
+:root[data-theme='sakura'] {
+  --bg: #fcd9e8;
+  --surface: #ffeaf2;
+  --raised: #fff5f9;
+  --ink: #3d1f2e;
+  --muted: #7a4f61;
+  --hairline: #f5bcd3;
+  --accent: #b3145a;
   --accent-ink: #ffffff;
-  --good: #1f6b57;
-  --good-soft: #d9ece6;
-  --bad: #98383f;
-  --bad-soft: #f4dfe1;
+  --good: #0a6b46;
+  --good-soft: #c6ead9;
+  --bad: #b81f1f;
+  --bad-soft: #f7d4d4;
   --good-ink: #ffffff;
   --bad-ink: #ffffff;
 }
 
-:root[data-theme='plum'] {
-  --bg: #16101a;
-  --surface: #1e1724;
-  --raised: #261e2d;
-  --ink: #ece5f0;
-  --muted: #a698ae;
-  --hairline: #332a3b;
-  --accent: #c08fd6;
-  --accent-ink: #14091a;
-  --good: #85c79c;
-  --good-soft: #19271f;
-  --bad: #e28fa0;
-  --bad-soft: #2b171d;
-  --good-ink: #16101a;
-  --bad-ink: #16101a;
-}
-
-:root[data-theme='sand'] {
-  --bg: #f7f3ec;
-  --surface: #fdfaf5;
-  --raised: #ffffff;
-  --ink: #241f18;
-  --muted: #675e51;
-  --hairline: #e2d9ca;
-  --accent: #8f5c14;
-  --accent-ink: #ffffff;
-  --good: #4c6534;
-  --good-soft: #e7ecd8;
-  --bad: #96392a;
-  --bad-soft: #f4e0da;
+/*
+ * Warm greige and one hot coral. The neutrals are deliberately warm, which is
+ * what keeps this from being the steel palette with a red button — the two
+ * grounds sit at the same chroma and opposite temperatures.
+ *
+ * The one thing to know: the accent and `--bad` are the same hue, because red
+ * is what a wrong answer is. They are separated by lightness instead, and the
+ * two never appear in the same control — but a plain notice and an error
+ * notice do sit close in this theme.
+ */
+:root[data-theme='coral'] {
+  --bg: #ece7e3;
+  --surface: #f7f3f0;
+  --raised: #fffdfc;
+  --ink: #1a1412;
+  --muted: #5f544e;
+  --hairline: #cfc5be;
+  --accent: #ff5c5c;
+  --accent-ink: #250707;
+  --good: #0a6b3d;
+  --good-soft: #cfe6d8;
+  --bad: #8f1a1a;
+  --bad-soft: #f0cfcf;
   --good-ink: #ffffff;
   --bad-ink: #ffffff;
 }
 
-:root[data-theme='slate'] {
-  --bg: #12161a;
-  --surface: #1a1f25;
-  --raised: #21272e;
-  --ink: #e3e8ed;
-  --muted: #9aa5b1;
-  --hairline: #2c343d;
-  --accent: #7fa9c9;
-  --accent-ink: #0b1116;
-  --good: #79c39d;
-  --good-soft: #16261f;
-  --bad: #dd8f95;
-  --bad-soft: #2a181a;
-  --good-ink: #12161a;
-  --bad-ink: #12161a;
-}
-
-:root[data-theme='rose'] {
-  --bg: #f9eff1;
-  --surface: #fdf7f8;
+/*
+ * 冰冷金屬. Bright metal, not a dark screen: a cool silver ground with the
+ * three surfaces stepped so panels read as machined layers rather than paper.
+ * Ground chroma stays near zero because metal is achromatic; the only colour
+ * is a cold blue on the things that act, and it is light enough that its
+ * label is near-black rather than white.
+ */
+:root[data-theme='steel'] {
+  --bg: #e7ecf1;
+  --surface: #f3f7fa;
   --raised: #ffffff;
-  --ink: #241519;
-  --muted: #6a545a;
-  --hairline: #e7d1d6;
-  --accent: #9c3651;
-  --accent-ink: #ffffff;
-  --good: #3f6a4f;
-  --good-soft: #e2eee6;
-  --bad: #9c3a3a;
-  --bad-soft: #f6dede;
+  --ink: #101820;
+  --muted: #4f5c68;
+  --hairline: #b8c4d0;
+  --accent: #1594c4;
+  --accent-ink: #04161e;
+  --good: #0a6b3d;
+  --good-soft: #cbe6d7;
+  --bad: #a81f1f;
+  --bad-soft: #f2d3d3;
   --good-ink: #ffffff;
   --bad-ink: #ffffff;
 }
 
-:root[data-theme='mono'] {
-  --bg: #ffffff;
-  --surface: #fafafa;
-  --raised: #ffffff;
-  --ink: #000000;
-  --muted: #4f4f4f;
-  --hairline: #cfcfcf;
-  --accent: #000000;
+/*
+ * 工程師. A phosphor terminal, and the only theme that inverts the rule the
+ * others follow: the ground stays near black, which is what makes it read as
+ * a terminal, and every bit of colour lives in the text instead.
+ */
+:root[data-theme='terminal'] {
+  --bg: #080b09;
+  --surface: #0d120f;
+  --raised: #111815;
+  --ink: #6ef79a;
+  --muted: #4f9e6d;
+  --hairline: #1e2b23;
+  --accent: #39ff88;
+  --accent-ink: #04140b;
+  --good: #4ade80;
+  --good-soft: #0e2a1a;
+  --bad: #ff5f56;
+  --bad-soft: #2c1210;
+  --good-ink: #04140b;
+  --bad-ink: #1a0503;
+}
+
+/*
+ * 時尚橘. Built around one orange the whole way down. The accent is bright
+ * enough that white fails on it at 2.6, so its label is near-black instead —
+ * which is also how that colour is used anywhere it is used well.
+ */
+:root[data-theme='amber'] {
+  --bg: #f9c294;
+  --surface: #fddec4;
+  --raised: #fff1e4;
+  --ink: #361a08;
+  --muted: #7a4416;
+  --hairline: #e8a26a;
+  --accent: #f77e2d;
+  --accent-ink: #2b1405;
+  --good: #04562f;
+  --good-soft: #c6e4d2;
+  --bad: #8f1717;
+  --bad-soft: #f0cccc;
+  --good-ink: #ffffff;
+  --bad-ink: #ffffff;
+}
+
+/*
+ * A widely used dark that the other two do not cover: purple-grey ground,
+ * vivid purple and pink. Distinct from terminal by not being black.
+ */
+:root[data-theme='dracula'] {
+  --bg: #221b33;
+  --surface: #2a2340;
+  --raised: #332b4d;
+  --ink: #f3f0ff;
+  --muted: #aca3c9;
+  --hairline: #463c66;
+  --accent: #bd93f9;
+  --accent-ink: #1a1b23;
+  --good: #50fa7b;
+  --good-soft: #22402c;
+  --bad: #ff6e88;
+  --bad-soft: #3d2129;
+  --good-ink: #0f2015;
+  --bad-ink: #2a1119;
+}
+
+/*
+ * The light green nothing else here provides — terminal's green is on black,
+ * and after it there was no green in the set at all. Soft enough to read
+ * against for a long round.
+ */
+:root[data-theme='matcha'] {
+  --bg: #dfe9c8;
+  --surface: #edf3dd;
+  --raised: #f7faee;
+  --ink: #1e2a12;
+  --muted: #556040;
+  --hairline: #c2d0a3;
+  --accent: #3f6b1f;
   --accent-ink: #ffffff;
-  --good: #1f1f1f;
-  --good-soft: #ececec;
-  --bad: #1f1f1f;
-  --bad-soft: #e2e2e2;
+  --good: #0d6b46;
+  --good-soft: #c6e6d4;
+  --bad: #a82020;
+  --bad-soft: #f2d2d2;
   --good-ink: #ffffff;
   --bad-ink: #ffffff;
 }
