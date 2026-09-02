@@ -122,17 +122,26 @@ values to a Worker at runtime, there is no Worker script here, and the token has
 to be in the HTML before it is served. Set in the wrong one, the build succeeds
 and no beacon appears.
 
-After deploying, count them:
+After deploying, count them — and count them like this, because the two obvious
+shortcuts both lie:
 
 ```
-curl -s https://<host>/ | grep -c cloudflareinsights
+curl -s -H 'User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) \
+  AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' \
+  https://<host>/ | grep -o 'cloudflareinsights' | wc -l
 ```
 
-One is right. Two means the zone's automatic injection did not skip the beacon
-already on the page, and the parent domain's *Manage Site → Advanced Options →
-JS Snippet injection* has to be turned off — at the cost of the parent needing
-its own snippet too. Worth checking rather than assuming: the documentation says
-only that one snippet is used per page, not which.
+`grep -c` counts matching *lines*, and the built HTML is on few enough lines
+that two beacon tags register as one. And the edge only injects for requests
+that look like a browser: a plain `curl` sees one tag and passes, while a real
+visitor gets two.
+
+Two is what this returns today, and the documentation's "only one JS snippet is
+used per page" does not mean the edge skips the one already there — both load,
+both report. So a subdomain measured this way is counted twice until the zone's
+*Web Analytics → Manage Site → Advanced Options → JS Snippet injection* is
+turned off, which costs the parent domain its automatic collection and means
+installing the snippet there too.
 
 It is the **only** source for LCP, INP and CLS. The app carries no vitals code
 of its own: the `web-vitals` package was downloading 3 KB gzipped to feed a
