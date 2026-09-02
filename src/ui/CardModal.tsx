@@ -46,9 +46,16 @@ export function CardModal({ title, onClose, children }: Props) {
     >
       <div class="card-modal" role="dialog" aria-modal="true" aria-label={title}>
         <div class="card-surface">
-          <div class="card-body">
-            <h2>{title}</h2>
-            {children}
+          {/*
+            The title is outside the scrolling panel, not above it inside. A
+            long list is the case this modal has to survive, and a heading that
+            scrolls away takes with it the only thing saying what you are
+            looking at — along with the close button's backdrop, leaving a ✕
+            floating over the rows.
+          */}
+          <h2 class="card-modal-title">{title}</h2>
+          <div class="card-modal-scroll">
+            <div class="card-body">{children}</div>
           </div>
         </div>
         {/*

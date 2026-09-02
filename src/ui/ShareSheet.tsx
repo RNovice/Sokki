@@ -7,6 +7,16 @@ import { Icon } from './Icon'
 
 interface Props {
   deckRef: DeckRef
+  /**
+   * Prefilled from whatever the deck is already called — but only prefilled.
+   * Editing it here renames the link, not the deck: what you send someone is
+   * often not what you call it yourself, and a share sheet is a poor place to
+   * silently rewrite something you own. The deck's own name is changed on its
+   * home screen.
+   */
+  name: string
+  /** Carried in the link, so what the recipient sees matches what was shared. */
+  markdown: boolean
   onClose: () => void
 }
 
@@ -15,15 +25,17 @@ interface Props {
  * `&g=` — the URL format is an implementation detail, and asking someone to
  * assemble query parameters by hand is the opposite of no learning curve.
  */
-export function ShareSheet({ deckRef, onClose }: Props) {
+export function ShareSheet({ deckRef, name, markdown, onClose }: Props) {
   useEscapeToClose(onClose)
 
-  const [title, setTitle] = useState(deckRef.kind === 'sheet' ? (deckRef.title ?? '') : '')
+  // Seeded from the name the deck already has, so this field edits it rather
+  // than starting blank and quietly dropping it out of the link.
+  const [title, setTitle] = useState(deckRef.kind === 'sheet' ? name : '')
   const [copied, setCopied] = useState(false)
 
   const named: DeckRef =
     deckRef.kind === 'sheet' ? { ...deckRef, title: title.trim() || undefined } : deckRef
-  const link = shareUrl(named)
+  const link = shareUrl(named, markdown)
   const editUrl = sheetEditUrl(deckRef)
 
   async function copy() {
@@ -71,7 +83,7 @@ export function ShareSheet({ deckRef, onClose }: Props) {
               <input id="share-link" type="text" readOnly value={link} />
             </label>
 
-          <div class="row">
+          <div class="row share-actions">
             <button class="primary" onClick={() => void copy()}>
               <Icon name={copied ? 'check' : 'share'} />
               {copied ? t('share.copied') : t('share.copy')}

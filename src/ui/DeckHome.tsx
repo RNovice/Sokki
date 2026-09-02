@@ -1,12 +1,23 @@
+import { useEffect, useRef, useState } from 'preact/hooks'
 import { isFinished, roundSize } from '../core/session'
 import type { DeckPrefs, Direction, Session } from '../core/types'
 import { t, tp } from '../i18n'
 import { SelectField, ToggleField } from './Field'
+import { Icon } from './Icon'
 
 const DIRECTIONS: Direction[] = ['front-back', 'back-front', 'mixed']
 
 interface Props {
   title: string
+  /**
+   * Whether this deck can be named. Built-in decks cannot: their titles are
+   * translated strings, and overwriting one would freeze it in the language it
+   * was renamed in.
+   */
+  canRename: boolean
+  /** Empty when it has none — which is every deck loaded by pasting its URL. */
+  name: string
+  onRename: (name: string) => void
   cardCount: number
   prefs: DeckPrefs
   session: Session | null
@@ -34,6 +45,9 @@ interface Props {
  */
 export function DeckHome({
   title,
+  canRename,
+  name,
+  onRename,
   cardCount,
   prefs,
   session,
@@ -62,6 +76,8 @@ export function DeckHome({
    * ascending looks exactly like one that was never shuffled; a round saved
    * before that field existed reads as shuffled, which is the default.
    */
+  const [editing, setEditing] = useState(false)
+
   const settingsDiffer =
     unfinished != null &&
     (unfinished.direction !== prefs.direction ||
@@ -71,7 +87,34 @@ export function DeckHome({
   return (
     <div class="page">
       <div class="deck-headline">
-        <h2>{title}</h2>
+        {/*
+          The heading is where a deck gets its name, because that is where you
+          first see what is in it. A link only carries a name when the share
+          sheet put one there, so a spreadsheet you loaded yourself arrives
+          anonymous — and the prompt to fix that belongs at the moment you can
+          answer it, not on the landing page before you have seen a card.
+        */}
+        {editing ? (
+          <RenameField
+            initial={name}
+            onDone={(value) => {
+              onRename(value)
+              setEditing(false)
+            }}
+            onCancel={() => setEditing(false)}
+          />
+        ) : (
+          <h2>
+            {canRename ? (
+              <button class="rename-trigger" onClick={() => setEditing(true)}>
+                <span>{name || t('deckHome.nameIt')}</span>
+                <Icon name="pencil" class="rename-mark" />
+              </button>
+            ) : (
+              title
+            )}
+          </h2>
+        )}
         <span class="muted">{tp('deck.cards', cardCount)}</span>
       </div>
 
@@ -139,7 +182,70 @@ export function DeckHome({
           checked={prefs.shuffle}
           onChange={(checked) => onPrefs({ shuffle: checked })}
         />
+
+        {/*
+          Not part of the "next round" comparison above, and deliberately so:
+          this changes how text is drawn, not how a round is built, so it takes
+          effect on the very next card rather than waiting.
+        */}
+        <ToggleField
+          label={t('settings.markdown')}
+          checked={prefs.markdown}
+          onChange={(checked) => onPrefs({ markdown: checked })}
+        />
       </div>
     </div>
+  )
+}
+
+/**
+ * Naming, as a form so that Enter commits it — on a phone that is the keyboard's
+ * own confirm key, which is the only submit control most people will look for.
+ */
+function RenameField({
+  initial,
+  onDone,
+  onCancel,
+}: {
+  initial: string
+  onDone: (name: string) => void
+  onCancel: () => void
+}) {
+  const [draft, setDraft] = useState(initial)
+  const field = useRef<HTMLInputElement>(null)
+
+  // On mount only. An inline ref callback would run on every render, and so
+  // would take focus back on every keystroke.
+  useEffect(() => field.current?.focus(), [])
+
+  return (
+    <form
+      class="rename-field"
+      onSubmit={(event) => {
+        event.preventDefault()
+        onDone(draft.trim())
+      }}
+    >
+      <input
+        type="text"
+        value={draft}
+        // Deliberately unlabelled: it replaces the heading in place, so the
+        // heading it replaced is the label.
+        aria-label={t('deckHome.nameIt')}
+        placeholder={t('deckHome.namePlaceholder')}
+        autocomplete="off"
+        ref={field}
+        onInput={(event) => setDraft((event.target as HTMLInputElement).value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            onCancel()
+          }
+        }}
+      />
+      <button class="primary" type="submit">
+        {t('common.save')}
+      </button>
+    </form>
   )
 }

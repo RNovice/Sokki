@@ -3,17 +3,19 @@ export default {
   'app.tagline': 'Google スプレッドシートをフラッシュカードに。アカウント不要、データは一切保存しません。',
 
   'common.back': '戻る',
+  'common.save': '保存',
   'common.close': '閉じる',
   'common.loading': '読み込み中',
   'common.retry': 'もう一度',
   'common.home': 'ホームへ',
-  'common.install': 'インストール',
   'common.settings': '設定',
 
   'landing.pasteLabel': 'Google スプレッドシートのリンクを貼り付け',
   'landing.pastePlaceholder': 'https://docs.google.com/spreadsheets/d/…',
   'landing.load': 'デッキを読み込む',
   'landing.invalidUrl': 'リンクを認識できません。スプレッドシートの URL を貼り付けるか、下のサンプルをお試しください。',
+  'landing.recent': '最近開いたデッキ',
+  'landing.recentCount.other': '最近開いた {n} 件',
   'landing.examples': 'サンプルで試す',
   'landing.examplesSub': 'すぐ試せるデッキが 4 つ、準備は不要',
   'landing.howtoSub': 'A 列が問題、B 列が答え。手順は 3 つ',
@@ -68,6 +70,8 @@ export default {
   'deckHome.start': '開始',
   'deckHome.resume': '続きから {current} / {total}',
   'deckHome.restart': '最初から',
+  'deckHome.nameIt': 'このデッキに名前をつける',
+  'deckHome.namePlaceholder': '例：日本語 N5 動詞',
   'deckHome.settingsNextRound': 'このラウンドは開始時の設定のままです。新しい設定は次のラウンドから反映されます。',
   'deckHome.refreshed': 'シートの最新の内容を読み込みました。',
 
@@ -80,6 +84,8 @@ export default {
   'settings.count': '1 ラウンドの枚数',
   'settings.countAll': 'すべて',
   'settings.shuffle': 'シャッフル',
+  'settings.markdown': 'Markdown で表示',
+  'settings.clearRecent': '最近の履歴を消去',
 
   'direction.front-back': '表 → 裏',
   'direction.back-front': '裏 → 表',
@@ -106,5 +112,4 @@ export default {
 
   'banner.offline': 'オフライン — 前回読み込んだ内容を表示しています。',
   'banner.updated': 'シートが変更されました。デッキに戻ると反映されます。',
-  'banner.install': 'ホーム画面に追加するとオフラインでも使えます。',
 } satisfies Record<string, string>

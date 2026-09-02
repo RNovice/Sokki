@@ -33,6 +33,7 @@ export type IconName =
   | 'cross'
   | 'flip'
   | 'offline'
+  | 'pencil'
 
 interface Props extends Omit<JSX.SVGAttributes<SVGSVGElement>, 'size'> {
   name: IconName
@@ -76,6 +77,12 @@ const PATHS: Record<IconName, JSX.Element> = {
       <path d="M3 3l18 18" />
       <path d="M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 3.5-2.3M19 13a10 10 0 0 0-6.5-2.9" />
       <circle cx="12" cy="20" r="0.5" />
+    </>
+  ),
+  pencil: (
+    <>
+      <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" />
+      <path d="M14 6l4 4" />
     </>
   ),
 }

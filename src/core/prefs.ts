@@ -57,7 +57,12 @@ function isPrefs(value: unknown): value is DeckPrefs {
     (DIRECTIONS as readonly string[]).includes(p.direction) &&
     typeof p.count === 'number' &&
     p.count >= 0 &&
-    typeof p.shuffle === 'boolean'
+    typeof p.shuffle === 'boolean' &&
+    // Absent is valid: preferences saved before these fields existed still
+    // load, and loadPrefs fills the defaults in. A deck with no name of its
+    // own is also the normal case, not a missing value.
+    (p.markdown === undefined || typeof p.markdown === 'boolean') &&
+    (p.name === undefined || typeof p.name === 'string')
   )
 }
 
@@ -85,7 +90,11 @@ export function saveSettings(settings: Settings): void {
 }
 
 export function loadPrefs(deckKey: string): DeckPrefs {
-  return readJson(`prefs:${deckKey}`, isPrefs) ?? { ...DEFAULT_PREFS }
+  // Merged over the defaults rather than returned as found, so a record written
+  // by an older build gains any field added since instead of arriving with a
+  // hole in it that the type says cannot be there.
+  const saved = readJson(`prefs:${deckKey}`, isPrefs)
+  return saved ? { ...DEFAULT_PREFS, ...saved } : { ...DEFAULT_PREFS }
 }
 
 export function savePrefs(deckKey: string, prefs: DeckPrefs): void {

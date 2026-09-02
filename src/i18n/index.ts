@@ -79,3 +79,33 @@ export function tp(key: string, count: number, params?: Record<string, string | 
 export function formatNumber(value: number): string {
   return new Intl.NumberFormat(active).format(value)
 }
+
+/**
+ * Units from largest to smallest; the first one the gap reaches is the one to
+ * say it in. "2 days ago" rather than "48 hours ago".
+ */
+const DIVISIONS: readonly (readonly [Intl.RelativeTimeFormatUnit, number])[] = [
+  ['year', 365 * 86_400_000],
+  ['month', 30 * 86_400_000],
+  ['week', 7 * 86_400_000],
+  ['day', 86_400_000],
+  ['hour', 3_600_000],
+  ['minute', 60_000],
+]
+
+/**
+ * "3 days ago", in the reader's language.
+ *
+ * Intl does the whole job, so this needs no translations of its own and adds
+ * nothing to the three locale files — and `numeric: 'auto'` gets the idiomatic
+ * forms for free: 昨天, yesterday, 昨日 rather than "1 day ago" three times.
+ */
+export function formatRelativeTime(then: number, now = Date.now()): string {
+  const format = new Intl.RelativeTimeFormat(active, { numeric: 'auto' })
+  const delta = then - now
+  for (const [unit, ms] of DIVISIONS) {
+    if (Math.abs(delta) >= ms) return format.format(Math.round(delta / ms), unit)
+  }
+  // Anything under a minute is "now" / 現在 / 今 — seconds are noise here.
+  return format.format(0, 'second')
+}

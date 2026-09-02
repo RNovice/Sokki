@@ -3,17 +3,20 @@ export default {
   'app.tagline': 'Turn a Google Sheet into flashcards. No account, and we keep none of your data.',
 
   'common.back': 'Back',
+  'common.save': 'Save',
   'common.close': 'Close',
   'common.loading': 'Loading',
   'common.retry': 'Try again',
   'common.home': 'Home',
-  'common.install': 'Install',
   'common.settings': 'Settings',
 
   'landing.pasteLabel': 'Paste a Google Sheets link',
   'landing.pastePlaceholder': 'https://docs.google.com/spreadsheets/d/…',
   'landing.load': 'Load deck',
   'landing.invalidUrl': "That link doesn't look like a Google Sheet. Paste the sheet URL, or try an example below.",
+  'landing.recent': 'Recently opened',
+  'landing.recentCount.one': '{n} deck you opened recently',
+  'landing.recentCount.other': '{n} decks you opened recently',
   'landing.examples': 'Try one now',
   'landing.examplesSub': 'Four ready-made decks, nothing to prepare',
   'landing.howtoSub': 'Column A asks, column B answers — three steps',
@@ -71,6 +74,8 @@ export default {
   'deckHome.start': 'Start',
   'deckHome.resume': 'Continue {current} / {total}',
   'deckHome.restart': 'Start over',
+  'deckHome.nameIt': 'Name this deck',
+  'deckHome.namePlaceholder': 'For example: JLPT N5 verbs',
   'deckHome.settingsNextRound': 'This round keeps the settings it started with. The new ones apply to the next.',
   'deckHome.refreshed': 'Loaded the latest content from the sheet.',
 
@@ -83,6 +88,8 @@ export default {
   'settings.count': 'Cards per round',
   'settings.countAll': 'All',
   'settings.shuffle': 'Shuffle',
+  'settings.markdown': 'Markdown formatting',
+  'settings.clearRecent': 'Clear recent decks',
 
   'direction.front-back': 'Front → Back',
   'direction.back-front': 'Back → Front',
@@ -109,5 +116,4 @@ export default {
 
   'banner.offline': 'Offline — showing the last loaded version.',
   'banner.updated': 'The sheet changed. It will be picked up back on the deck.',
-  'banner.install': 'Add to your home screen to use it offline.',
 } satisfies Record<string, string>

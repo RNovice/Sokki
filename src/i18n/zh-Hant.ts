@@ -3,17 +3,19 @@ export default {
   'app.tagline': '把一份 Google Sheet 變成速記卡。不需要帳號，我們不保存你的任何資料。',
 
   'common.back': '返回',
+  'common.save': '儲存',
   'common.close': '關閉',
   'common.loading': '載入中',
   'common.retry': '重試',
   'common.home': '回首頁',
-  'common.install': '安裝',
   'common.settings': '設定',
 
   'landing.pasteLabel': '貼上 Google Sheets 連結',
   'landing.pastePlaceholder': 'https://docs.google.com/spreadsheets/d/…',
   'landing.load': '載入牌組',
   'landing.invalidUrl': '看不懂這個連結。貼上 Google Sheets 的網址，或試試下面的範例。',
+  'landing.recent': '最近讀過',
+  'landing.recentCount.other': '{n} 副最近開過的牌組',
   'landing.examples': '直接試試看',
   'landing.examplesSub': '四副現成的牌組，不用準備任何東西',
   'landing.howtoSub': 'A 欄問題、B 欄答案，三個步驟',
@@ -68,6 +70,8 @@ export default {
   'deckHome.start': '開始',
   'deckHome.resume': '繼續 {current} / {total}',
   'deckHome.restart': '重新開始',
+  'deckHome.nameIt': '為這副牌命名',
+  'deckHome.namePlaceholder': '例如：日文 N5 動詞',
   'deckHome.settingsNextRound': '這一輪仍使用原本的設定，新設定會在下一輪生效。',
   'deckHome.refreshed': '已讀取試算表的最新內容。',
 
@@ -80,6 +84,8 @@ export default {
   'settings.count': '每輪題數',
   'settings.countAll': '全部',
   'settings.shuffle': '隨機出題',
+  'settings.markdown': '以 Markdown 顯示',
+  'settings.clearRecent': '清除最近紀錄',
 
   'direction.front-back': '正面 → 背面',
   'direction.back-front': '背面 → 正面',
@@ -106,5 +112,4 @@ export default {
 
   'banner.offline': '離線中，顯示上次載入的版本。',
   'banner.updated': '試算表已變更，回到卡組後生效。',
-  'banner.install': '加到主畫面，離線也能用。',
 } satisfies Record<string, string>

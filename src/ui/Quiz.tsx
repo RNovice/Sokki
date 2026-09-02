@@ -3,6 +3,7 @@ import { currentIndex, facesFor, questionSide } from '../core/session'
 import type { Card, Session } from '../core/types'
 import { t, tp } from '../i18n'
 import { measure } from '../monitoring'
+import { CardText } from './CardText'
 import { FlipCard } from './FlipCard'
 import { Icon } from './Icon'
 
@@ -73,11 +74,13 @@ type Gesture =
 interface Props {
   session: Session
   cards: Card[]
+  /** Read the card text as Markdown. Per deck; see core/markdown. */
+  markdown: boolean
   swipeEnabled: boolean
   onAnswer: (knew: boolean) => void
 }
 
-export function Quiz({ session, cards, swipeEnabled, onAnswer }: Props) {
+export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props) {
   /**
    * Which side is up, tagged with the card it belongs to.
    *
@@ -328,8 +331,10 @@ export function Quiz({ session, cards, swipeEnabled, onAnswer }: Props) {
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
-          front={<span class="face-text face-question">{question}</span>}
-          back={<span class="face-text face-answer">{answer || '—'}</span>}
+          front={<CardText class="face-text face-question" text={question} markdown={markdown} />}
+          back={
+            <CardText class="face-text face-answer" text={answer || '—'} markdown={markdown} />
+          }
         />
         {dx !== 0 ? (
           <div

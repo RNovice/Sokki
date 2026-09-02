@@ -58,12 +58,31 @@ export interface DeckPrefs {
   /** How many cards this round. 0 means every card in the deck. */
   count: number
   shuffle: boolean
+  /**
+   * Read the card text as a small Markdown subset. Per deck rather than global
+   * because it describes the content, not the reader: whoever wrote the sheet
+   * knows whether it holds Markdown, and that is why the flag travels in the
+   * share link. Off by default, so a sheet full of asterisks keeps them.
+   */
+  markdown: boolean
+  /**
+   * What you call this deck, as opposed to what the link called it.
+   *
+   * The `t` parameter only exists on links the share sheet produced, so a
+   * spreadsheet you loaded by pasting its own URL has no name at all — which
+   * is every deck at the moment it is created. This is where that gets fixed,
+   * and it is stored per deck rather than in the URL because it is yours: a
+   * name you gave something does not travel to whoever you send it to unless
+   * you also share it.
+   */
+  name?: string
 }
 
 export const DEFAULT_PREFS: DeckPrefs = {
   direction: 'front-back',
   count: 0,
   shuffle: true,
+  markdown: false,
 }
 
 /**

@@ -68,18 +68,48 @@ export function refFromParams(params: URLSearchParams): DeckRef | null {
   return null
 }
 
-/** Every deck has a share link; that is the point of having only URL sources. */
-export function refToQuery(ref: DeckRef): string {
-  if (ref.kind === 'builtin') return `?d=${encodeURIComponent(ref.id)}`
+/**
+ * Whether a link asks for its card text to be read as Markdown, or says nothing
+ * about it.
+ *
+ * Undefined and false are different answers. Absent means the reader's own
+ * stored preference for this deck stands; `md=0` is an explicit "plain", which
+ * is what a sharer who turned it off and re-copied the link intends.
+ *
+ * Read separately from refFromParams because this is not part of the deck's
+ * identity — the same spreadsheet is the same deck either way, and folding it
+ * into DeckRef would put it in the key that names the saved round.
+ */
+export function markdownFromParams(params: URLSearchParams): boolean | undefined {
+  const value = params.get('md')
+  if (value === null) return undefined
+  return value === '1' || value === 'true'
+}
 
-  const params = new URLSearchParams({ s: ref.sheetId })
-  if (ref.gid !== '0') params.set('g', ref.gid)
-  if (ref.title) params.set('t', ref.title)
+/** Every deck has a share link; that is the point of having only URL sources. */
+export function refToQuery(ref: DeckRef, markdown = false): string {
+  const params =
+    ref.kind === 'builtin'
+      ? new URLSearchParams({ d: ref.id })
+      : new URLSearchParams({ s: ref.sheetId })
+
+  if (ref.kind === 'sheet') {
+    if (ref.gid !== '0') params.set('g', ref.gid)
+    if (ref.title) params.set('t', ref.title)
+  }
+  // Only when on: the default has to stay the shortest link, and an absent
+  // parameter is also what leaves an existing reader's preference alone.
+  if (markdown) params.set('md', '1')
+
   return `?${params}`
 }
 
-export function shareUrl(ref: DeckRef, origin = location.origin + location.pathname): string {
-  return origin + refToQuery(ref)
+export function shareUrl(
+  ref: DeckRef,
+  markdown = false,
+  origin = location.origin + location.pathname,
+): string {
+  return origin + refToQuery(ref, markdown)
 }
 
 /* ------------------------------------------------------------ source parsing */
@@ -125,6 +155,18 @@ export function parseSheetInput(raw: string): DeckRef | null {
   if (isSheetId(input)) return { kind: 'sheet', sheetId: input, gid: '0', title: undefined }
 
   return null
+}
+
+/**
+ * The Markdown flag on a pasted link, if it carries one. Companion to
+ * parseSheetInput rather than part of it, for the same reason
+ * markdownFromParams is separate: it describes how to read the deck, not which
+ * deck it is.
+ */
+export function markdownFromInput(raw: string): boolean | undefined {
+  const query = raw.indexOf('?')
+  if (query === -1) return undefined
+  return markdownFromParams(new URLSearchParams(raw.slice(query + 1)))
 }
 
 /* ------------------------------------------------------------------ fetching */

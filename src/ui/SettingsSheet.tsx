@@ -8,6 +8,9 @@ import { Icon } from './Icon'
 interface Props {
   settings: Settings
   onSettings: (patch: Partial<Settings>) => void
+  /** Whether there is any history to clear; the control hides when there is not. */
+  hasRecent: boolean
+  onClearRecent: () => void
   onClose: () => void
 }
 
@@ -16,7 +19,7 @@ interface Props {
  * Anything that shapes a round lives on the deck's own screen, where choosing
  * it cannot destroy a round already under way.
  */
-export function SettingsSheet({ settings, onSettings, onClose }: Props) {
+export function SettingsSheet({ settings, onSettings, hasRecent, onClearRecent, onClose }: Props) {
   useEscapeToClose(onClose)
 
   return (
@@ -65,6 +68,18 @@ export function SettingsSheet({ settings, onSettings, onClose }: Props) {
           />
         </div>
 
+        {/*
+          Only when there is something to clear. A control that does nothing is
+          worse than an absent one, and this is the only place the app admits to
+          keeping anything, so it should appear exactly when that is true.
+        */}
+        {hasRecent ? (
+          <div class="row">
+            <button class="quiet" onClick={onClearRecent}>
+              {t('settings.clearRecent')}
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   )

@@ -4,11 +4,19 @@ import {
   deckKey,
   findBuiltin,
   loadDeck,
+  markdownFromParams,
   refFromParams,
   refToQuery,
   type LoadFailure,
 } from './core/deck'
 import { loadPrefs, loadSettings, savePrefs, saveSettings } from './core/prefs'
+import {
+  clearRecent,
+  loadRecent,
+  rememberDeck,
+  renameRecent,
+  type RecentDeck,
+} from './core/recent'
 import {
   answer as answerCard,
   isFinished,
@@ -79,6 +87,12 @@ export function App() {
   const [sourceChanged, clearSourceChanged] = useSourceChanged()
   const [sheet, setSheet] = useState<'none' | 'settings' | 'share'>('none')
   /*
+   * Held here rather than read inside Landing, so that clearing the history
+   * from the settings sheet — which sits over the landing page without
+   * remounting it — takes effect on the list behind it straight away.
+   */
+  const [recent, setRecent] = useState<RecentDeck[]>(() => loadRecent())
+  /*
    * Bumped once the requested locale's strings have actually arrived. Loading
    * is async, so anything that calls t() during render — the deck title, the
    * document title — has to depend on this rather than on settings.locale, or
@@ -107,21 +121,40 @@ export function App() {
 
   /* -------------------------------------------------------------- routing */
 
-  const openRef = useCallback(async (ref: DeckRef, push: boolean) => {
-    if (push) history.pushState({}, '', refToQuery(ref))
+  const openRef = useCallback(async (ref: DeckRef, push: boolean, markdown?: boolean) => {
+    const deckKeyForRef = deckKey(ref)
+    /*
+     * A link that names the Markdown setting overrides what is stored, because
+     * whoever shared it wrote the content and knows how it is meant to be read.
+     * A link that says nothing leaves the reader's own choice for this deck
+     * alone — which is why the parameter is optional rather than a boolean.
+     */
+    const opening =
+      markdown === undefined ? loadPrefs(deckKeyForRef) : { ...loadPrefs(deckKeyForRef), markdown }
+    if (markdown !== undefined) savePrefs(deckKeyForRef, opening)
+
+    if (push) history.pushState({}, '', refToQuery(ref, opening.markdown))
     setStage({ name: 'loading', ref })
     setSession(null)
     setStudying(false)
 
     try {
       const cards = await measureAsync('deck-fetch', () => loadDeck(ref))
-      const deckKeyForRef = deckKey(ref)
       setStage({ name: 'deck', ref, cards })
+      // Recorded only once the sheet has actually answered with cards, so a
+      // dead or unshared link never takes a slot. Recorded under the name we
+      // know it by, which is your own if you have given it one.
+      setRecent(
+        rememberDeck(
+          ref.kind === 'sheet' ? { ...ref, title: opening.name || ref.title } : ref,
+          cards.length,
+        ),
+      )
       // Initialised here, where the cards are already in hand, rather than in
       // an effect watching them. Watching them meant that re-reading the deck
       // after the source moved re-ran the whole open sequence and wiped the
       // very notice that said it had been re-read.
-      setPrefs(loadPrefs(deckKeyForRef))
+      setPrefs(opening)
       setJustRefreshed(false)
       // Restored, not resumed: an interrupted round is offered on the deck's
       // home screen rather than dropping the reader into a card they did not
@@ -143,8 +176,9 @@ export function App() {
   // Read the URL on first paint and whenever the back button moves us.
   useEffect(() => {
     const sync = () => {
-      const ref = refFromParams(new URLSearchParams(location.search))
-      if (ref) void openRef(ref, false)
+      const params = new URLSearchParams(location.search)
+      const ref = refFromParams(params)
+      if (ref) void openRef(ref, false, markdownFromParams(params))
       else setStage({ name: 'landing' })
     }
     sync()
@@ -201,13 +235,27 @@ export function App() {
       const next = { ...prefs, ...patch }
       setPrefs(next)
       savePrefs(key, next)
+      /*
+       * Markdown is the one preference the URL carries, so the address bar is
+       * kept honest about it — and copying the address bar then shares what is
+       * actually on screen. Replaced rather than pushed: changing how the text
+       * is drawn is not a place the back button should return to.
+       */
+      if (stage.name !== 'landing' && next.markdown !== prefs.markdown) {
+        history.replaceState({}, '', refToQuery(stage.ref, next.markdown))
+      }
+      // The recent list keeps its own copy of the name so it can be shown
+      // without loading every deck, so a rename has to reach it too.
+      if (stage.name !== 'landing' && next.name !== prefs.name) {
+        setRecent(renameRecent(stage.ref, next.name ?? ''))
+      }
       // The round in progress is left alone. It carries its own direction, and
       // its size and order were fixed when it was built, so it does not depend
       // on these values at all — the round used to be thrown away here to keep
       // it "consistent" with settings it never read. The deck screen points out
       // when the two differ; the next round picks the new values up.
     },
-    [key, prefs],
+    [key, prefs, cards, stage],
   )
 
   /* ------------------------------------------------------- source refresh */
@@ -256,10 +304,11 @@ export function App() {
       const builtin = findBuiltin(ref.id)
       return builtin ? t(builtin.titleKey) : null
     }
-    // An unnamed sheet has no title of its own. Returning null lets the app
-    // name stand alone, instead of rendering it twice on both sides of a dot.
-    return ref.title || null
-  }, [stage, localeTick])
+    // Yours first, then whatever the link called it. An unnamed sheet has no
+    // title at all; returning null lets the app name stand alone, instead of
+    // rendering it twice on both sides of a dot.
+    return prefs?.name || ref.title || null
+  }, [stage, prefs, localeTick])
 
   useEffect(() => {
     document.title = deckTitle ? `${deckTitle} · ${t('app.name')}` : t('app.name')
@@ -280,10 +329,13 @@ export function App() {
         onSettings={() => setSheet('settings')}
       />
 
-      <Banners hasDeck={stage.name === 'deck'} sourceChanged={sourceChanged && studying} />
+      <Banners sourceChanged={sourceChanged && studying} />
 
       {stage.name === 'landing' ? (
-        <Landing onOpen={(ref) => void openRef(ref, true)} />
+        <Landing
+          recent={recent}
+          onOpen={(ref, markdown) => void openRef(ref, true, markdown)}
+        />
       ) : null}
 
       {stage.name === 'loading' ? (
@@ -311,6 +363,9 @@ export function App() {
         !studying ? (
           <DeckHome
             title={deckTitle ?? t('deck.untitled')}
+            canRename={stage.ref.kind === 'sheet'}
+            name={deckTitle ?? ''}
+            onRename={(name) => updatePrefs({ name: name || undefined })}
             cardCount={stage.cards.length}
             prefs={prefs}
             session={session}
@@ -324,6 +379,7 @@ export function App() {
           <Result
             session={session}
             cards={stage.cards}
+            markdown={prefs.markdown}
             onRetryWrong={retryMisses}
             onRestart={restart}
             onBackToDeck={() => setStudying(false)}
@@ -332,6 +388,7 @@ export function App() {
           <Quiz
             session={session}
             cards={stage.cards}
+            markdown={prefs.markdown}
             swipeEnabled={settings.swipeEnabled}
             onAnswer={onAnswer}
           />
@@ -342,12 +399,22 @@ export function App() {
         <SettingsSheet
           settings={settings}
           onSettings={updateSettings}
+          hasRecent={recent.length > 0}
+          onClearRecent={() => {
+            clearRecent()
+            setRecent([])
+          }}
           onClose={() => setSheet('none')}
         />
       ) : null}
 
       {sheet === 'share' && activeRef ? (
-        <ShareSheet deckRef={activeRef} onClose={() => setSheet('none')} />
+        <ShareSheet
+          deckRef={activeRef}
+          name={deckTitle ?? ''}
+          markdown={prefs?.markdown ?? false}
+          onClose={() => setSheet('none')}
+        />
       ) : null}
     </>
   )

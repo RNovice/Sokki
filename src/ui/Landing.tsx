@@ -1,23 +1,30 @@
 import { useState } from 'preact/hooks'
-import { BUILTIN_DECKS, parseSheetInput } from '../core/deck'
+import { BUILTIN_DECKS, markdownFromInput, parseSheetInput } from '../core/deck'
+import { refFromRecent, type RecentDeck } from '../core/recent'
 import type { DeckRef } from '../core/types'
-import { t, tp } from '../i18n'
+import { formatRelativeTime, t, tp } from '../i18n'
 import { CardModal } from './CardModal'
 import { Icon } from './Icon'
 
 interface Props {
-  onOpen: (ref: DeckRef) => void
+  /**
+   * `markdown` is what the pasted link said, if it said anything. Undefined
+   * means it did not, and the reader's own preference for the deck stands.
+   */
+  onOpen: (ref: DeckRef, markdown?: boolean) => void
+  /** Owned by App so that clearing it from the settings sheet is visible here. */
+  recent: RecentDeck[]
 }
 
-type Panel = 'none' | 'examples' | 'howto'
+type Panel = 'none' | 'recent' | 'examples' | 'howto'
 
 /**
- * Four things, and nothing that expands in place: what this is, where to paste
- * a link, and two rows that open. Both rows are shaped exactly like the sample
- * decks they lead to — label, detail, chevron — so what can be opened is
- * legible before anything is read.
+ * What this is, where to paste a link, and a short list of rows that open.
+ * Every row is the same shape — label, detail, chevron — and every one of them
+ * opens a panel rather than expanding in place, so the page never reflows under
+ * the reader and its height does not depend on how much they have used it.
  */
-export function Landing({ onOpen }: Props) {
+export function Landing({ onOpen, recent }: Props) {
   const [input, setInput] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
   const [panel, setPanel] = useState<Panel>('none')
@@ -29,7 +36,7 @@ export function Landing({ onOpen }: Props) {
       return
     }
     setProblem(null)
-    onOpen(ref)
+    onOpen(ref, markdownFromInput(input))
   }
 
   return (
@@ -66,6 +73,24 @@ export function Landing({ onOpen }: Props) {
       </div>
 
       <div class="row-list">
+        {/*
+          One row, not one per deck: the same shape as the two below it, opening
+          the same kind of panel. A list that grows down the landing page would
+          push everything else off the screen for exactly the people who use the
+          app most. Nothing renders when there is no history, so a first visit
+          looks as it did before this existed — the row is earned, not shown.
+        */}
+        {recent.length > 0 ? (
+          <button class="row-link" onClick={() => setPanel('recent')}>
+            <span class="grow">
+              <span class="name">{t('landing.recent')}</span>
+              <br />
+              <span class="sub">{tp('landing.recentCount', recent.length)}</span>
+            </span>
+            <Icon name="chevron" class="deck-arrow" />
+          </button>
+        ) : null}
+
         <button class="row-link" onClick={() => setPanel('examples')}>
           <span class="grow">
             <span class="name">{t('landing.examples')}</span>
@@ -84,6 +109,31 @@ export function Landing({ onOpen }: Props) {
           <Icon name="chevron" class="deck-arrow" />
         </button>
       </div>
+
+      {panel === 'recent' ? (
+        <CardModal title={t('landing.recent')} onClose={() => setPanel('none')}>
+          <div class="row-list">
+            {recent.map((entry) => (
+              <button
+                key={`${entry.sheetId}:${entry.gid}`}
+                class="row-link"
+                onClick={() => onOpen(refFromRecent(entry))}
+              >
+                <span class="grow">
+                  {/* A link can arrive with no name at all; the deck screen's
+                      own fallback is used so the two never disagree. */}
+                  <span class="name">{entry.title || t('deck.untitled')}</span>
+                  <br />
+                  <span class="sub">
+                    {formatRelativeTime(entry.lastOpened)} · {tp('deck.cards', entry.cardCount)}
+                  </span>
+                </span>
+                <Icon name="chevron" class="deck-arrow" />
+              </button>
+            ))}
+          </div>
+        </CardModal>
+      ) : null}
 
       {panel === 'examples' ? (
         <CardModal title={t('landing.examples')} onClose={() => setPanel('none')}>

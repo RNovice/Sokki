@@ -1,10 +1,12 @@
 import { t, tp } from '../i18n'
 import { facesFor, questionSide } from '../core/session'
 import type { Card, Session } from '../core/types'
+import { CardText } from './CardText'
 
 interface Props {
   session: Session
   cards: Card[]
+  markdown: boolean
   onRetryWrong: () => void
   onRestart: () => void
   onBackToDeck: () => void
@@ -16,7 +18,7 @@ interface Props {
  * just failed, without being asked, is how a drill starts to feel like a
  * punishment.
  */
-export function Result({ session, cards, onRetryWrong, onRestart, onBackToDeck }: Props) {
+export function Result({ session, cards, markdown, onRetryWrong, onRestart, onBackToDeck }: Props) {
   const total = session.order.length
   const missed = session.wrong
 
@@ -43,8 +45,8 @@ export function Result({ session, cards, onRetryWrong, onRestart, onBackToDeck }
               const { question, answer } = facesFor(card, side)
               return (
                 <div class="item" key={`${cardIndex}-${i}`}>
-                  <span class="a">{question}</span>
-                  <span class="b">{answer}</span>
+                  <CardText class="a" text={question} markdown={markdown} />
+                  <CardText class="b" text={answer} markdown={markdown} />
                 </div>
               )
             })}

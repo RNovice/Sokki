@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { deckKey, parseSheetInput, refFromParams, refToQuery, sourceUrl } from './deck'
+import {
+  deckKey,
+  markdownFromInput,
+  markdownFromParams,
+  parseSheetInput,
+  refFromParams,
+  refToQuery,
+  sourceUrl,
+} from './deck'
 
 const ID = '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms'
 
@@ -116,5 +124,52 @@ describe('deckKey', () => {
     const a = deckKey({ kind: 'sheet', sheetId: ID, gid: '0', title: 'before' })
     const b = deckKey({ kind: 'sheet', sheetId: ID, gid: '0', title: 'after' })
     expect(a).toBe(b)
+  })
+})
+
+/*
+ * The Markdown flag travels in the link rather than only in local storage, so
+ * that what a recipient sees matches what the sharer saw. It is deliberately
+ * not part of the deck's identity.
+ */
+describe('the markdown parameter', () => {
+  it('is absent by default, so the shortest link stays the common one', () => {
+    expect(refToQuery({ kind: 'builtin', id: 'toeic' })).toBe('?d=toeic')
+    expect(refToQuery({ kind: 'sheet', sheetId: ID, gid: '0', title: undefined })).toBe(`?s=${ID}`)
+  })
+
+  it('is added only when on', () => {
+    expect(refToQuery({ kind: 'builtin', id: 'toeic' }, true)).toBe('?d=toeic&md=1')
+    expect(refToQuery({ kind: 'sheet', sheetId: ID, gid: '0', title: undefined }, true)).toBe(
+      `?s=${ID}&md=1`,
+    )
+  })
+
+  it('round-trips', () => {
+    const query = refToQuery({ kind: 'sheet', sheetId: ID, gid: '7', title: 'N5' }, true)
+    const params = new URLSearchParams(query.slice(1))
+    expect(refFromParams(params)).toMatchObject({ sheetId: ID, gid: '7', title: 'N5' })
+    expect(markdownFromParams(params)).toBe(true)
+  })
+
+  it('separates "said nothing" from "said off"', () => {
+    // Undefined leaves the reader's stored preference for the deck alone; false
+    // is a sharer who turned it off and copied the link again.
+    expect(markdownFromParams(new URLSearchParams(`s=${ID}`))).toBeUndefined()
+    expect(markdownFromParams(new URLSearchParams(`s=${ID}&md=0`))).toBe(false)
+    expect(markdownFromParams(new URLSearchParams(`s=${ID}&md=1`))).toBe(true)
+  })
+
+  it('stays out of the deck key, so turning it on does not orphan a round', () => {
+    const plain = refFromParams(new URLSearchParams(`s=${ID}`))!
+    const formatted = refFromParams(new URLSearchParams(`s=${ID}&md=1`))!
+    expect(deckKey(formatted)).toBe(deckKey(plain))
+  })
+
+  it('survives a link pasted into the box instead of clicked', () => {
+    expect(markdownFromInput(`https://example.com/?s=${ID}&md=1`)).toBe(true)
+    expect(markdownFromInput(`https://example.com/?s=${ID}`)).toBeUndefined()
+    // A bare spreadsheet URL says nothing about it either way.
+    expect(markdownFromInput(`https://docs.google.com/spreadsheets/d/${ID}/edit`)).toBeUndefined()
   })
 })

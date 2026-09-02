@@ -143,9 +143,26 @@ button {
   background: var(--raised);
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
-  padding: 10px 14px;
-  min-height: var(--tap);
+  padding: 7px 14px;
+  /*
+   * Below --tap, which is deliberate and scoped: the two answer buttons keep
+   * the full 48px because they are hit at speed, mid-round, with a thumb. The
+   * rest are aimed at deliberately and were only that size by inheritance.
+   * Still well clear of the 24px WCAG minimum.
+   */
+  min-height: 40px;
   cursor: pointer;
+  /*
+   * Flex rather than inline-block, so an icon and its label are laid out with a
+   * gap instead of butting together. JSX drops the whitespace between an
+   * element and the text after it, so there is no space to inherit — the gap
+   * has to be declared, and declaring it here covers every button at once
+   * whichever order the two are in.
+   */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
   transition: border-color 120ms ease, background 120ms ease;
 }
 
@@ -178,10 +195,9 @@ button.small {
   font-size: 14px;
 }
 
-/* Icons sit on the text baseline rather than the box centre, which is what
-   keeps a label and its icon from looking a pixel out of step. */
+/* Alignment is the flex container's job now; this only keeps an icon from
+   being squeezed when the label beside it is long. */
 button svg {
-  vertical-align: -0.14em;
   flex: none;
 }
 
@@ -216,9 +232,10 @@ select {
   background: var(--raised);
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
-  padding: 11px 12px;
+  padding: 7px 12px;
   width: 100%;
-  min-height: var(--tap);
+  /* Matched to the buttons they sit beside, for the same reason. */
+  min-height: 40px;
 }
 
 /*
@@ -302,6 +319,16 @@ a {
   flex-wrap: wrap;
 }
 
+/*
+ * Wider than a plain row. Eight pixels reads as "these two belong together",
+ * which is right for two buttons and wrong here: one is a filled button and
+ * the other is a bare link, and at that distance the link looks like part of
+ * the button rather than a separate way out.
+ */
+.share-actions {
+  gap: 16px;
+}
+
 h2 {
   font-size: 17px;
   font-weight: 600;
@@ -341,6 +368,65 @@ p {
   gap: 4px;
 }
 
+/*
+ * Naming, in the heading itself.
+ *
+ * A button that looks like the heading rather than a heading with a button
+ * beside it: the whole title is the target, which on a phone is the difference
+ * between a comfortable tap and aiming at a pencil. The mark is there to say it
+ * can be tapped, not to be the thing you tap.
+ */
+.rename-trigger {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border-color: transparent;
+  padding: 0;
+  min-height: 0;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.rename-trigger:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rename-mark {
+  flex: none;
+  font-size: 0.7em;
+  color: var(--muted);
+}
+
+.rename-field {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.rename-field input {
+  flex: 1;
+  min-width: 0;
+  /*
+   * Smaller than a form field, because it is not one: it stands in for a
+   * heading for a few seconds. The type stays at 16px — anything less and iOS
+   * magnifies the whole page the moment it takes focus.
+   */
+  min-height: 34px;
+  padding: 3px 8px;
+}
+
+.rename-field button {
+  min-height: 34px;
+  padding: 3px 12px;
+  font-size: 14px;
+}
+
 .deck-headline h2 {
   font-size: 20px;
   overflow-wrap: anywhere;
@@ -366,6 +452,14 @@ p {
   width: 100%;
   text-align: left;
   padding: 14px;
+  /*
+   * Deck names are typed by people, and a long one with nothing to break on
+   * has no width the row can shrink to: it runs past the card's edge and takes
+   * the chevron with it. Inherited, so it covers the name and its detail line
+   * both. The rows that shipped before this were all our own strings, which is
+   * why it went unnoticed until a name could come from outside.
+   */
+  overflow-wrap: anywhere;
   min-height: 60px;
 }
 
@@ -656,6 +750,118 @@ p {
   line-height: 1.6;
 }
 
+/* ------------------------------------------------------------------ markdown */
+
+/*
+ * Card text read as Markdown. Opt-in per deck and carried in the share link;
+ * see core/markdown for what the subset contains and why it is that small.
+ *
+ * Nothing here is styled by tag name alone. The elements only ever appear
+ * inside a face or a result row, and reaching them through their own classes
+ * keeps this section from leaking onto the rest of the app.
+ */
+
+.md-lines,
+.md-h,
+.md-quote,
+.md-list,
+.md-rule {
+  margin: 0;
+}
+
+/*
+ * Any structure at all: the face spans the card and stacks its blocks.
+ *
+ * The width is not cosmetic. Without it the face is shrink-to-fit, so a
+ * thematic break comes out only as wide as the word above it and reads as a
+ * strikethrough rather than a divider.
+ */
+.md-wide {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7em;
+}
+
+/*
+ * Structure that is prose also changes how the text is set. Prose at question
+ * size overflows a card within a line or two, and a bulleted list centred on
+ * its own ragged edges is unreadable — so it drops to reading size, loses the
+ * question's extra weight, and aligns left. A rule does not reach this rule:
+ * it needs the width above and nothing else.
+ */
+.md-prose {
+  text-align: left;
+}
+
+.face-question.md-prose,
+.face-answer.md-prose {
+  font-size: clamp(17px, 4.5vw, 21px);
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+/*
+ * Six levels, flattened. A heading on a card is emphasis, not an outline: the
+ * document's own h1 is the top bar, and a card that answered `#` with 2em type
+ * would need scrolling to read three words.
+ */
+.md-h {
+  font-weight: 700;
+  line-height: 1.35;
+  font-size: 1em;
+}
+
+.md-h1 {
+  font-size: 1.3em;
+}
+
+.md-h2 {
+  font-size: 1.18em;
+}
+
+.md-h3 {
+  font-size: 1.08em;
+}
+
+.md-quote {
+  border-left: 3px solid var(--hairline);
+  padding-left: 12px;
+  color: var(--muted);
+}
+
+.md-list {
+  padding-left: 1.4em;
+  list-style: disc;
+}
+
+.md-list li {
+  margin: 0;
+}
+
+.md-rule {
+  border: 0;
+  border-top: 1px solid var(--hairline);
+}
+
+/*
+ * Monospace on a quiet plate. The ground is --bg, which sits just off the
+ * raised card in most themes — but only just, and in `mono` the two are the
+ * same white, where the plate would disappear entirely. The hairline is what
+ * actually guarantees the span is legible as code: it is the border every card
+ * in the app is drawn with, so it is visible against the surface by
+ * construction, in all ten themes.
+ */
+.md-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--bg);
+  border: 1px solid var(--hairline);
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+  overflow-wrap: anywhere;
+}
+
 /* Swipe feedback: a tint on the card edge, so intent is visible before release. */
 .swipe-tint {
   position: absolute;
@@ -804,8 +1010,39 @@ p {
   flex-direction: column;
 }
 
+/*
+ * The surface itself does not scroll — its inner panel does, so the title can
+ * stay put above it. Padding moves inward for the same reason: on the surface
+ * it would sit above the scroll and clip the rows against a hard edge.
+ */
 .card-modal .card-surface {
   max-height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.card-modal-title {
+  flex: none;
+  margin: 0;
+  font-size: 15px;
+  /* Named here because the heading no longer sits inside .card-body, and the
+     surface it does sit in centres its text for the quiz card's sake. */
+  text-align: left;
+  /* Clear of the close button: 44px of button plus its 8px inset. */
+  padding: 20px 52px 12px 20px;
+}
+
+.card-modal-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  /*
+   * The bottom value is the point of this rule. Without it the last row ends
+   * flush against the card's edge, which reads as content cut off rather than
+   * content finished.
+   */
+  padding: 0 20px 20px;
 }
 
 /* Same corner the quiz card puts its turn mark in, so the top-right of a card
@@ -831,12 +1068,6 @@ p {
   color: var(--ink);
   border-color: var(--hairline);
   background: var(--surface);
-}
-
-/* Keep a long title clear of the close button: 44px of button plus its 8px
-   inset, so the text stops before the button starts rather than beside it. */
-.card-modal .card-body h2 {
-  padding-right: 52px;
 }
 
 .sheet-backdrop {
