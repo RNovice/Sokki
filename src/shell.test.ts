@@ -60,6 +60,15 @@ describe.skipIf(BUILT === null)('the static landing shell', () => {
     expect(BUILT).toContain(en['landing.examples'])
   })
 
+  it('keeps the analytics beacon out of the inline-script count', () => {
+    // The beacon is only emitted when a token is configured, so this asserts a
+    // conditional: if it is there, it carries a src. Both seal-csp.mjs and the
+    // test above count *inline* scripts, and a beacon without a src would push
+    // that count to two and take the CSP hash with it.
+    const beacon = /<script([^>]*cloudflareinsights[^>]*)>/.exec(BUILT!)
+    if (beacon) expect(beacon[1]).toMatch(/\bsrc=/)
+  })
+
   it('leaves the markup the app renders into', () => {
     // main.tsx empties #app before rendering, so the shell only has to look
     // right — but it has to be inside #app for that emptying to reach it.

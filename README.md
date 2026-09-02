@@ -100,9 +100,39 @@ card type promising an image the page does not have. The public validators fetch
 localhost, so reach for `cloudflared tunnel --url http://localhost:4173` when you
 want to see the card itself rather than its parts.
 
-Turn on Web Analytics in the dashboard for traffic and Core Web Vitals. It sets
-no cookie and no identifier, so it needs no consent banner and does not
-contradict the promise above, and the CSP already allows its beacon.
+Web Analytics gives traffic and Core Web Vitals. It sets no cookie and no
+identifier, so it needs no consent banner and does not contradict the promise
+above, and the CSP already allows its beacon.
+
+Its snippet is installed in the page, from `VITE_CF_BEACON_TOKEN`, rather than
+injected at the edge. Automatic injection is zone-level: it lands on every
+hostname under the domain, so a project on a subdomain has its numbers mixed
+into the parent's and can only be separated by filtering a shared dashboard.
+Web Analytics also declines to offer automatic setup for a subdomain — a "site"
+there means a zone, and a subdomain is a record inside one, so it answers "this
+hostname does not belong to any site in your account" and hands you the
+snippet. That is the isolated route, not a problem to route around.
+
+With no token no beacon is emitted at all, which is what a local build wants.
+The token is not a secret — it ships in the HTML of every page it measures —
+but it is a variable so that a fork does not report into someone else's
+dashboard. Set it in **Settings → Build → Build Variables and Secrets**, which
+is not the same page as *Settings → Variables and Secrets*: the latter binds
+values to a Worker at runtime, there is no Worker script here, and the token has
+to be in the HTML before it is served. Set in the wrong one, the build succeeds
+and no beacon appears.
+
+After deploying, count them:
+
+```
+curl -s https://<host>/ | grep -c cloudflareinsights
+```
+
+One is right. Two means the zone's automatic injection did not skip the beacon
+already on the page, and the parent domain's *Manage Site → Advanced Options →
+JS Snippet injection* has to be turned off — at the cost of the parent needing
+its own snippet too. Worth checking rather than assuming: the documentation says
+only that one snippet is used per page, not which.
 
 It is the **only** source for LCP, INP and CLS. The app carries no vitals code
 of its own: the `web-vitals` package was downloading 3 KB gzipped to feed a

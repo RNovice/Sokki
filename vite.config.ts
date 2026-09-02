@@ -88,6 +88,29 @@ function landingShell(): string {
  * left relative, which most crawlers resolve anyway but none promise to.
  */
 let envOrigin = ''
+let envBeaconToken = ''
+
+/**
+ * Cloudflare Web Analytics, installed by hand rather than at the edge.
+ *
+ * Automatic injection is a zone-level rewrite: it lands on every hostname under
+ * `example.com`, so a project on a subdomain has its numbers mixed into the
+ * parent's and can only be separated by filtering a shared dashboard. And
+ * Web Analytics will not offer automatic setup for a subdomain at all — a
+ * "site" there means a zone, and a subdomain is a record inside one.
+ *
+ * So the beacon goes in the page. It then reports only where this build is
+ * served, which is the isolation wanted, and it is in version control rather
+ * than being invisibly appended by the proxy.
+ *
+ * The token is not a secret — it ships in the HTML of every page it measures.
+ * It lives in .env.production for the same reason the origin does, and being a
+ * variable means a fork of this repository does not report into someone else's
+ * dashboard.
+ */
+function beaconToken() {
+  return envBeaconToken.trim()
+}
 
 function siteOrigin() {
   const origin = envOrigin.replace(/\/$/, '')
@@ -109,7 +132,9 @@ export default defineConfig(({ mode }) => {
    * The origin is not a secret, so it lives in .env.production and needs no
    * dashboard setting to be correct.
    */
-  envOrigin = loadEnv(mode, process.cwd(), '').VITE_SITE_ORIGIN ?? ''
+  const env = loadEnv(mode, process.cwd(), '')
+  envOrigin = env.VITE_SITE_ORIGIN ?? ''
+  envBeaconToken = env.VITE_CF_BEACON_TOKEN ?? ''
 
   return {
   base: process.env.BASE_PATH ?? '/',
@@ -142,15 +167,42 @@ export default defineConfig(({ mode }) => {
            * is the point: `?s=<sheet>` is not a page of ours to publish, and
            * there is an unbounded number of them.
            */
-          tags: siteOrigin()
-            ? [
-                {
-                  tag: 'link',
-                  attrs: { rel: 'canonical', href: `${siteOrigin()}/` },
-                  injectTo: 'head' as const,
-                },
-              ]
-            : [],
+          tags: [
+            ...(siteOrigin()
+              ? [
+                  {
+                    tag: 'link',
+                    attrs: { rel: 'canonical', href: `${siteOrigin()}/` },
+                    injectTo: 'head' as const,
+                  },
+                ]
+              : []),
+            /*
+             * Omitted entirely without a token, rather than shipped pointing at
+             * nothing: an analytics script that cannot report is bytes and a
+             * connection spent for no reason, and every local build would make
+             * one.
+             *
+             * It carries `src`, which matters twice over: scripts/seal-csp.mjs
+             * and src/shell.test.ts both count *inline* scripts, and both skip
+             * anything with a src, so this cannot disturb the CSP hash. The
+             * policy in public/_headers already allows both of the hosts it
+             * needs.
+             */
+            ...(beaconToken()
+              ? [
+                  {
+                    tag: 'script',
+                    attrs: {
+                      defer: true,
+                      src: 'https://static.cloudflareinsights.com/beacon.min.js',
+                      'data-cf-beacon': JSON.stringify({ token: beaconToken() }),
+                    },
+                    injectTo: 'body' as const,
+                  },
+                ]
+              : []),
+          ],
         }),
       },
     },
