@@ -9,45 +9,53 @@
  *
  * Language is deliberately not carried in the share URL: someone who receives
  * a deck should see it in their own language, not the sender's.
+ *
+ * There is no subscription to a locale change, deliberately. `loadLocale`
+ * returns a promise and App bumps a counter when it settles, which the memos
+ * that call t() depend on. A listener set would be a second mechanism for the
+ * same thing, and one of the two would rot.
  */
 
 import type { Locale } from '../core/types'
-import zhHant from './zh-Hant'
+import en from './en'
 
 export type Dict = Record<string, string>
 
 const loaders: Record<Locale, () => Promise<{ default: Dict }>> = {
-  'zh-Hant': async () => ({ default: zhHant }),
-  en: () => import('./en'),
+  en: async () => ({ default: en }),
+  'zh-Hant': () => import('./zh-Hant'),
   ja: () => import('./ja'),
 }
 
-// zh-Hant is bundled rather than split: it is the default for most visitors,
-// and a round trip before first paint would cost more than the strings weigh.
-let dict: Dict = zhHant
-let active: Locale = 'zh-Hant'
-const listeners = new Set<() => void>()
+/*
+ * English is bundled rather than split, and the other two are fetched.
+ *
+ * Whichever language is bundled is the one shown for the moment before the
+ * reader's own arrives, because `dict` starts as that one — including in the
+ * document title, which is why the tab used to flicker through Chinese for
+ * everybody. English is the better thing to flicker through: it is the widest
+ * fallback, it is what the static shell in index.html is written in, and it is
+ * what a crawler indexes.
+ */
+let dict: Dict = en
+let active: Locale = 'en'
 
-export function currentLocale(): Locale {
-  return active
-}
-
-export async function useLocale(locale: Locale): Promise<void> {
+/**
+ * Named `loadLocale`, not `useLocale`: it is an ordinary async function, not a
+ * hook. The `use` prefix is a contract — it promises the caller may only call
+ * it at the top level of a component — and this one has no such requirement.
+ * A linter that believes the prefix reports the correct call site as an error.
+ */
+export async function loadLocale(locale: Locale): Promise<void> {
   if (locale === active) return
   try {
     const loaded = await loaders[locale]()
     dict = loaded.default
     active = locale
     document.documentElement.lang = locale
-    for (const listener of listeners) listener()
   } catch {
     // A failed chunk load must not blank the interface; stay on what works.
   }
-}
-
-export function onLocaleChange(listener: () => void): () => void {
-  listeners.add(listener)
-  return () => listeners.delete(listener)
 }
 
 /**

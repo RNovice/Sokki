@@ -39,9 +39,9 @@ try {
  * are collected into arrays because og:locale:alternate is legitimately
  * repeated, and keeping only the last one would report the others as missing.
  */
-function metaTags(html) {
+function metaTags(source) {
   const found = new Map()
-  for (const [tag] of html.matchAll(/<meta\b[^>]*>/gi)) {
+  for (const [tag] of source.matchAll(/<meta\b[^>]*>/gi)) {
     const key = /(?:property|name)=["']([^"']+)["']/i.exec(tag)?.[1]
     const value = /content=["']([\s\S]*?)["']/i.exec(tag)?.[1]
     if (key && value !== undefined) found.set(key, [...(found.get(key) ?? []), value])
@@ -127,7 +127,7 @@ if (imageUrl) {
           `measured ${fetched.url} instead. Confirm it once the site is deployed.`,
       )
     }
-    image = { bytes: fetched.buffer.length, ...(pngSize(fetched.buffer) ?? {}) }
+    image = { bytes: fetched.buffer.length, ...pngSize(fetched.buffer) }
     if (!image.width) problems.push('og:image is not a PNG this script can read')
     else if (image.width < 600 || image.height < 315)
       problems.push(`og:image is ${image.width}x${image.height}; 1200x630 is the usual target`)

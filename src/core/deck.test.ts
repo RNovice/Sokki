@@ -90,7 +90,7 @@ describe('refToQuery', () => {
 
   it('round-trips a title containing characters that need encoding', () => {
     const ref = { kind: 'sheet', sheetId: ID, gid: '5', title: 'N5 & 旅行' } as const
-    const parsed = refFromParams(new URLSearchParams(refToQuery(ref)!.slice(1)))
+    const parsed = refFromParams(new URLSearchParams(refToQuery(ref).slice(1)))
     expect(parsed).toMatchObject({ sheetId: ID, gid: '5', title: 'N5 & 旅行' })
   })
 

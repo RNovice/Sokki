@@ -28,6 +28,17 @@ interface Props {
   onPointerCancel?: (event: PointerEvent) => void
 }
 
+/*
+ * Built once, at module load, and handed to both faces.
+ *
+ * The card re-renders on every pointermove while it is being dragged, and this
+ * mark is the same eleven bytes of SVG every time. Preact bails out of diffing
+ * a vnode whose `_original` matches the previous one, and a constant always
+ * matches — including when the same object is used twice in one tree, because
+ * the clone Preact makes for the second position carries `_original` with it.
+ */
+const FLIP_MARK = <Icon name="flip" class="face-flip-mark" />
+
 export function FlipCard({
   front,
   back,
@@ -60,11 +71,11 @@ export function FlipCard({
       <div class={`card-inner${flipped ? ' flipped' : ''}`}>
         <div class="card-face">
           {front}
-          <Icon name="flip" class="face-flip-mark" />
+          {FLIP_MARK}
         </div>
         <div class="card-face back">
           {back}
-          <Icon name="flip" class="face-flip-mark" />
+          {FLIP_MARK}
         </div>
       </div>
     </div>

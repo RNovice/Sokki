@@ -17,19 +17,44 @@ That makes the sheet readable by anyone holding the link, so keep private notes
 out of it. There is no private path — every deck is a URL, which is what makes
 every deck shareable.
 
+A deck can be named on its own screen, and the name travels in the share link
+as `&t=`. Card text can be read as a small Markdown subset — `**bold**`,
+`*italic*`, `` `code` ``, `~~strike~~`, headings, `>` quotes, `-` lists and
+`---` — which is off by default and carried in the link as `&md=1`, because the
+person who wrote the sheet is the one who knows whether it is Markdown. The
+parser returns a data structure and never an HTML string, so injection has no
+path rather than a filter to get past.
+
+The last twenty sheets you opened are listed on the landing page. That exists
+because the URL being the whole state means closing the tab otherwise loses the
+deck; it holds a spreadsheet id, a tab, a name and a timestamp, never card text,
+and one control in settings clears it.
+
 ## Running it
 
 ```
 npm install
 npm run dev        # http://localhost:5173
-npm test           # pure-function tests + the theme contrast gate
-npm run build      # typecheck, bundle, seal the CSP, enforce the budget
+npm run check      # lint, typecheck, test — everything that can fail
+npm run build      # check, then bundle, seal the CSP, enforce the budget
 ```
 
-`npm run build` fails if initial JS exceeds **60 KB gzipped**. That ceiling is
-about 1.5× what the app actually needs, so it only fires when something
-unjustified arrives — which it has already done three times, for React (47 KB),
-i18next (40 KB) and gtag.js (146 KB).
+`npm run build` runs `npm run check` first, so a build cannot ship with a
+failing test or a lint error. That was not always true: the tests used to sit
+outside the gate, which meant every one of them could be red and the deploy
+would still succeed.
+
+It then fails if initial JS exceeds **60 KB gzipped**. That ceiling is about 3×
+what the app actually needs, so it only fires when something unjustified arrives
+— which it has already done four times, for React (47 KB), i18next (40 KB),
+gtag.js (146 KB) and Prism (17 KB, for Markdown syntax highlighting).
+
+Linting is **oxlint**, not typescript-eslint, and not by preference: this repo
+is on TypeScript 7, whose package ships the Go compiler and no JavaScript
+compiler API, so typescript-eslint has nothing to bind to. `oxlint-tsgolint`
+does bind to it, which is how the type-aware rules — `no-floating-promises` and
+friends — still run. `.oxlintrc.json` says why each disabled rule is disabled;
+several of them are simply wrong for Preact or for refs.
 
 ## Deploying
 
@@ -54,9 +79,16 @@ have should say so rather than answer with the app.
 script hash is computed at build time by `scripts/seal-csp.mjs` — editing the
 inline theme script cannot leave the policy stale.
 
-Set `VITE_SITE_ORIGIN` in the build environment to the deployed origin. It makes
-`og:url` and `og:image` absolute; a link preview with a relative image is at the
-mercy of whether a given crawler resolves it.
+`VITE_SITE_ORIGIN` lives in `.env.production`, committed, because an origin is
+public by definition — it is the address people type. Without it the build warns
+and then silently drops the canonical link and `sitemap.xml`, since both have to
+be absolute to mean anything, and `og:url` stays relative.
+
+`robots.txt` and `sitemap.xml` are emitted by the build rather than kept in
+`public/`, because both need that origin and files in `public/` are copied
+verbatim. Nothing is disallowed: blocking `?s=` would stop a crawler reading the
+canonical that tells it those are not pages, which is worse than letting it read
+one and move on.
 
 There is deliberately no preview image. One identical for every deck carries
 nothing, and a large one takes the card over and pushes the description — the
@@ -70,21 +102,72 @@ want to see the card itself rather than its parts.
 
 Turn on Web Analytics in the dashboard for traffic and Core Web Vitals. It sets
 no cookie and no identifier, so it needs no consent banner and does not
-contradict the promise above. The CSP already allows its beacon.
+contradict the promise above, and the CSP already allows its beacon.
+
+It is the **only** source for LCP, INP and CLS. The app carries no vitals code
+of its own: the `web-vitals` package was downloading 3 KB gzipped to feed a
+function that discarded every value, because reporting needs an endpoint and
+there is none. Two sources for one number is one too many, and that was the one
+costing bytes.
 
 ## Shape of the code
 
 ```
 src/core/     csv, deck references and loading, the round, storage, preferences
-src/i18n/     ~70 strings per locale, loaded on demand
-src/theme/    twelve tokens, ten palettes, all gated on WCAG AA
-src/monitoring/  web-vitals, deduplicated errors, over-threshold timings
+src/i18n/     ~100 strings per locale; English is bundled, the other two load
+src/theme/    fourteen tokens, ten palettes, eleven pairings gated on WCAG AA
+src/monitoring/  deduplicated errors and over-threshold timings, nothing else
+src/dev/      render counting, for development only — see below
 src/ui/       the screens
 ```
 
 Written as React, shipped as Preact: `vite.config.ts` aliases `react` and
 `react-dom` to `preact/compat`. Deleting those three lines is the whole
 migration path back to React, should 47 KB ever be worth it.
+
+### The landing page exists twice
+
+`index.html` ships a static copy of the landing page inside `#app`, built by
+`landingShell()` in `vite.config.ts`. Two things were wrong without it: a
+crawler that does not run JavaScript saw no words at all, and the real users'
+largest-contentful element was a button inside `#app`, so nothing painted until
+the bundle had downloaded, parsed and rendered.
+
+Its strings come from the locale module, so the wording cannot drift. **The
+structure can.** It mirrors `ui/Landing` and `ui/TopBar` by hand, and if either
+changes shape without this following, the first paint and the first render
+disagree and the page shifts. That is the cost of it, and the reason it stops at
+the landing page and is not attempted for any other screen. `src/shell.test.ts`
+catches what it can — the title, the language, the number of inline scripts.
+
+`main.tsx` empties `#app` before rendering rather than hydrating: hydration
+needs the markup to match what the component would produce, and it cannot,
+because the shell is one language and the reader may want another.
+
+### Counting renders
+
+There is no React DevTools here, and `react-scan` does not work — it reads
+React's fiber tree and only uses Preact to build its own interface. Preact's own
+devtools extension is the equivalent. `src/dev/render-audit.ts` is neither, and
+needs no extension, so it runs on a real phone over the network:
+
+```js
+__renders.reset()      // before the interaction you want to measure
+__renders.report()     // a table, busiest component first
+__renders.parents()    // Child <- Parent, to find who is pushing a render
+__renders.highlight()  // draw a box round whatever just re-rendered
+```
+
+It works by assigning to the private hooks Preact exposes on its `options`
+object — the same ones the devtools bridge uses. The catch is that the published
+build is minified, so `options._render` is `options.__r` in anything shipped and
+both names have to be wired up.
+
+It is loaded from a dynamic import behind `import.meta.env.DEV`, so Vite drops
+the file out of a production build; `npm run budget` is how you check that the
+initial JS figure has not moved. Two things to know about what it shows: it
+boxes mounts as well as re-renders, and the boxes cost a synchronous layout
+each, so read counts from it and measure durations with it off.
 
 ## What this deliberately does not do
 

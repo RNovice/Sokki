@@ -77,7 +77,7 @@ export function parseCsv(text: string): string[][] {
  * rather than rejected, so a spreadsheet someone already keeps notes in still
  * works without being edited down.
  */
-export function toCards(rows: string[][]): { cards: Card[]; skipped: number } {
+function toCards(rows: string[][]): { cards: Card[]; skipped: number } {
   const cards: Card[] = []
   let skipped = 0
 

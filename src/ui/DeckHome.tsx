@@ -151,6 +151,7 @@ export function DeckHome({
       <span class="section-label">{t('settings.deckSection')}</span>
       <div class="field-group">
         <SelectField
+          name="direction"
           label={t('settings.direction')}
           value={prefs.direction}
           onChange={(value) => onPrefs({ direction: value as Direction })}
@@ -163,6 +164,7 @@ export function DeckHome({
         </SelectField>
 
         <SelectField
+          name="count"
           label={t('settings.count')}
           value={String(prefs.count)}
           onChange={(value) => onPrefs({ count: Number(value) })}
@@ -178,6 +180,7 @@ export function DeckHome({
         </SelectField>
 
         <ToggleField
+          name="shuffle"
           label={t('settings.shuffle')}
           checked={prefs.shuffle}
           onChange={(checked) => onPrefs({ shuffle: checked })}
@@ -189,6 +192,7 @@ export function DeckHome({
           effect on the very next card rather than waiting.
         */}
         <ToggleField
+          name="markdown"
           label={t('settings.markdown')}
           checked={prefs.markdown}
           onChange={(checked) => onPrefs({ markdown: checked })}
@@ -228,6 +232,7 @@ function RenameField({
     >
       <input
         type="text"
+        name="deck-name"
         value={draft}
         // Deliberately unlabelled: it replaces the heading in place, so the
         // heading it replaced is the label.

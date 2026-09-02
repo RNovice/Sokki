@@ -26,7 +26,7 @@ class MemoryStorage implements Storage {
     this.data.delete(key)
   }
   setItem(key: string, value: string): void {
-    this.data.set(key, String(value))
+    this.data.set(key, value)
   }
   [name: string]: unknown
 }
@@ -62,6 +62,4 @@ globalThis.localStorage = new Proxy(raw, {
     }
     return Reflect.getOwnPropertyDescriptor(target, prop)
   },
-}) as Storage
-
-export {}
+})

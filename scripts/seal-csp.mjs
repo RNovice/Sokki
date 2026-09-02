@@ -19,9 +19,17 @@ import { fileURLToPath } from 'node:url'
 const DIST = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist')
 const html = readFileSync(join(DIST, 'index.html'), 'utf8')
 
-const inline = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(
-  (m) => m[1],
-)
+/**
+ * Only scripts the browser will actually run. A `<script type="application/
+ * ld+json">` is a data block — the browser never executes it, so CSP does not
+ * govern it and it needs no hash. Counting it here would fail the build for a
+ * tag that cannot run.
+ */
+const EXECUTABLE = /^(?:|text\/javascript|module|application\/javascript)$/i
+
+const inline = [...html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g)]
+  .filter(([, attrs]) => EXECUTABLE.test(/\btype=["']?([^"'\s>]*)/.exec(attrs)?.[1] ?? ''))
+  .map((m) => m[2])
 
 if (inline.length !== 1) {
   console.error(

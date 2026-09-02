@@ -1,4 +1,4 @@
-# Cloudflare Pages.
+# Cloudflare Workers static assets.
 #
 # __INLINE_SCRIPT_HASH__ is replaced at build time by scripts/seal-csp.mjs with
 # the real hash of the theme script in index.html. That script has to be inline
@@ -9,9 +9,10 @@
 # through a style attribute. That governs attributes, not <style> blocks, and
 # the app never renders user text as HTML, so the exposure is nil.
 #
-# The two cloudflareinsights hosts are the Web Analytics beacon, which Pages
-# injects once analytics is turned on in the dashboard. Without them here the
-# CSP would silently block it.
+# The two cloudflareinsights hosts are the Web Analytics beacon, injected at the
+# edge once analytics is turned on in the dashboard. Without them here the CSP
+# would silently block it — and it is the only thing measuring Core Web Vitals,
+# so the app would go blind without any error to show for it.
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable

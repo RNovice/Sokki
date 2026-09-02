@@ -13,11 +13,25 @@ import { Icon } from './Icon'
  * behaviour for free.
  */
 export function SelectField({
+  name,
   label,
   value,
   onChange,
   children,
 }: {
+  /*
+   * `name`, not `id`, and that distinction matters. Chrome's Issues panel asks
+   * for one or the other so it can identify the field for autofill — the label
+   * association is already correct through the wrapping <label>, which is why
+   * every field here reports the right accessible name without it.
+   *
+   * An `id` would be the wrong answer: this component is reused, and a sheet
+   * opening does not unmount the screen behind it, so two "Direction" selects
+   * are in the document at once. Sharing an id between them is a duplicate id,
+   * which is a real accessibility fault rather than the tidiness one being
+   * fixed here. A `name` has no uniqueness requirement outside a form.
+   */
+  name: string
   label: string
   value: string
   onChange: (value: string) => void
@@ -27,7 +41,11 @@ export function SelectField({
     <label>
       <span class="label-text">{label}</span>
       <span class="select-wrap">
-        <select value={value} onChange={(e) => onChange((e.target as HTMLSelectElement).value)}>
+        <select
+          name={name}
+          value={value}
+          onChange={(e) => onChange((e.target as HTMLSelectElement).value)}
+        >
           {children}
         </select>
         {/* Drawn by us because `appearance: none` removes the platform's own
@@ -41,10 +59,13 @@ export function SelectField({
 
 /** A checkbox with its label beside it, on one line. */
 export function ToggleField({
+  name,
   label,
   checked,
   onChange,
 }: {
+  /** See SelectField: a name, not an id, and only to identify the field. */
+  name: string
   label: string
   checked: boolean
   onChange: (checked: boolean) => void
@@ -53,6 +74,7 @@ export function ToggleField({
     <label class="toggle">
       <input
         type="checkbox"
+        name={name}
         checked={checked}
         onChange={(e) => onChange((e.target as HTMLInputElement).checked)}
       />

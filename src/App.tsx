@@ -27,7 +27,7 @@ import {
   startSession,
 } from './core/session'
 import type { Card, DeckPrefs, DeckRef, Session, Settings } from './core/types'
-import { t, useLocale } from './i18n'
+import { t, loadLocale } from './i18n'
 import { measureAsync } from './monitoring'
 import { applyTheme, watchSystemTheme } from './theme/apply'
 import { Banners } from './ui/Banners'
@@ -108,7 +108,7 @@ export function App() {
   }, [settings.theme])
 
   useEffect(() => {
-    void useLocale(settings.locale).then(() => setLocaleTick((n) => n + 1))
+    void loadLocale(settings.locale).then(() => setLocaleTick((n) => n + 1))
   }, [settings.locale])
 
   const updateSettings = useCallback((patch: Partial<Settings>) => {
@@ -308,92 +308,157 @@ export function App() {
     // title at all; returning null lets the app name stand alone, instead of
     // rendering it twice on both sides of a dot.
     return prefs?.name || ref.title || null
+    // localeTick looks unused to a linter and is not: t() reads a module-level
+    // dictionary that is swapped in asynchronously, so the only thing telling
+    // this memo that its output changed is the tick.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, prefs, localeTick])
 
   useEffect(() => {
-    document.title = deckTitle ? `${deckTitle} · ${t('app.name')}` : t('app.name')
+    /*
+     * With no deck open this is a sentence, not just the app's name. It is the
+     * strongest on-page signal a crawler reads, and "Sokki" alone says nothing
+     * about what the page is for. index.html ships the same string so that a
+     * reader on the default locale never sees the tab change.
+     */
+    document.title = deckTitle ? `${deckTitle} · ${t('app.name')}` : t('app.title')
   }, [deckTitle, localeTick])
 
   /* ------------------------------------------------------------- rendering */
 
   const activeRef = stage.name === 'landing' ? null : stage.ref
 
+  /*
+   * The chrome, held across renders.
+   *
+   * Opening a sheet is a state change on App, so without this it re-renders
+   * everything App renders — the bar, the banners, the page and the card —
+   * none of which has changed. Measured: five component renders on open and
+   * five more on close, plus the bar's three icons each time.
+   *
+   * The inline handlers being rebuilt inside the memo is not a problem: what
+   * Preact compares is the element, and while these dependencies hold it is
+   * the same object, which is what makes it skip the subtree.
+   */
+  const chrome = useMemo(
+    () => (
+      <>
+        <TopBar
+          title={deckTitle ?? t('app.name')}
+          showBack={stage.name !== 'landing'}
+          onBack={studying ? () => setStudying(false) : goHome}
+          canShare={activeRef !== null}
+          onShare={() => setSheet('share')}
+          onSettings={() => setSheet('settings')}
+        />
+        <Banners sourceChanged={sourceChanged && studying} />
+      </>
+    ),
+    // localeTick again: the bar's labels come from t(), which reads a module
+    // dictionary swapped in asynchronously. See the deck title above.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [deckTitle, stage.name, studying, activeRef, goHome, sourceChanged, localeTick],
+  )
+
+  /*
+   * The page under the chrome, held for the same reason. A sheet opening or
+   * closing must not re-render the card being studied.
+   */
+  const body = useMemo(
+    () => (
+      <>
+          {stage.name === 'landing' ? (
+            <Landing
+              recent={recent}
+              onOpen={(ref, markdown) => void openRef(ref, true, markdown)}
+            />
+          ) : null}
+
+          {stage.name === 'loading' ? (
+            <div class="center">
+              <span class="spin" /> {t('common.loading')}
+            </div>
+          ) : null}
+
+          {stage.name === 'error' ? (
+            <div class="page">
+              <div class="notice bad">
+                <strong>{t(`error.${camel(stage.reason)}`)}</strong>
+                <span>{t(`error.${camel(stage.reason)}.hint`)}</span>
+              </div>
+              <div class="row">
+                <button class="primary" onClick={() => void openRef(stage.ref, false)}>
+                  {t('common.retry')}
+                </button>
+                <button onClick={goHome}>{t('common.home')}</button>
+              </div>
+            </div>
+          ) : null}
+
+          {stage.name === 'deck' && prefs ? (
+            !studying ? (
+              <DeckHome
+                title={deckTitle ?? t('deck.untitled')}
+                canRename={stage.ref.kind === 'sheet'}
+                name={deckTitle ?? ''}
+                onRename={(name) => updatePrefs({ name: name || undefined })}
+                cardCount={stage.cards.length}
+                prefs={prefs}
+                session={session}
+                justRefreshed={justRefreshed}
+                onStart={beginRound}
+                onResume={enterQuiz}
+                onRestart={beginRound}
+                onPrefs={updatePrefs}
+              />
+            ) : session && isFinished(session) ? (
+              <Result
+                session={session}
+                cards={stage.cards}
+                markdown={prefs.markdown}
+                onRetryWrong={retryMisses}
+                onRestart={restart}
+                onBackToDeck={() => setStudying(false)}
+              />
+            ) : session ? (
+              <Quiz
+                session={session}
+                cards={stage.cards}
+                markdown={prefs.markdown}
+                swipeEnabled={settings.swipeEnabled}
+                onAnswer={onAnswer}
+              />
+            ) : null
+          ) : null}
+      </>
+    ),
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [
+      stage,
+      prefs,
+      session,
+      studying,
+      justRefreshed,
+      recent,
+      deckTitle,
+      settings.swipeEnabled,
+      openRef,
+      goHome,
+      updatePrefs,
+      beginRound,
+      enterQuiz,
+      retryMisses,
+      restart,
+      onAnswer,
+      localeTick,
+    ],
+  )
+
   return (
     <>
-      <TopBar
-        title={deckTitle ?? t('app.name')}
-        showBack={stage.name !== 'landing'}
-        onBack={studying ? () => setStudying(false) : goHome}
-        canShare={activeRef !== null}
-        onShare={() => setSheet('share')}
-        onSettings={() => setSheet('settings')}
-      />
+      {chrome}
 
-      <Banners sourceChanged={sourceChanged && studying} />
-
-      {stage.name === 'landing' ? (
-        <Landing
-          recent={recent}
-          onOpen={(ref, markdown) => void openRef(ref, true, markdown)}
-        />
-      ) : null}
-
-      {stage.name === 'loading' ? (
-        <div class="center">
-          <span class="spin" /> {t('common.loading')}
-        </div>
-      ) : null}
-
-      {stage.name === 'error' ? (
-        <div class="page">
-          <div class="notice bad">
-            <strong>{t(`error.${camel(stage.reason)}`)}</strong>
-            <span>{t(`error.${camel(stage.reason)}.hint`)}</span>
-          </div>
-          <div class="row">
-            <button class="primary" onClick={() => void openRef(stage.ref, false)}>
-              {t('common.retry')}
-            </button>
-            <button onClick={goHome}>{t('common.home')}</button>
-          </div>
-        </div>
-      ) : null}
-
-      {stage.name === 'deck' && prefs ? (
-        !studying ? (
-          <DeckHome
-            title={deckTitle ?? t('deck.untitled')}
-            canRename={stage.ref.kind === 'sheet'}
-            name={deckTitle ?? ''}
-            onRename={(name) => updatePrefs({ name: name || undefined })}
-            cardCount={stage.cards.length}
-            prefs={prefs}
-            session={session}
-            justRefreshed={justRefreshed}
-            onStart={beginRound}
-            onResume={enterQuiz}
-            onRestart={beginRound}
-            onPrefs={updatePrefs}
-          />
-        ) : session && isFinished(session) ? (
-          <Result
-            session={session}
-            cards={stage.cards}
-            markdown={prefs.markdown}
-            onRetryWrong={retryMisses}
-            onRestart={restart}
-            onBackToDeck={() => setStudying(false)}
-          />
-        ) : session ? (
-          <Quiz
-            session={session}
-            cards={stage.cards}
-            markdown={prefs.markdown}
-            swipeEnabled={settings.swipeEnabled}
-            onAnswer={onAnswer}
-          />
-        ) : null
-      ) : null}
+      {body}
 
       {sheet === 'settings' ? (
         <SettingsSheet

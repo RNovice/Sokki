@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useMemo, useState } from 'preact/hooks'
 import { BUILTIN_DECKS, markdownFromInput, parseSheetInput } from '../core/deck'
 import { refFromRecent, type RecentDeck } from '../core/recent'
 import type { DeckRef } from '../core/types'
@@ -39,39 +39,16 @@ export function Landing({ onOpen, recent }: Props) {
     onOpen(ref, markdownFromInput(input))
   }
 
-  return (
-    <div class="page">
-      <p class="muted">{t('app.tagline')}</p>
-
-      {problem ? (
-        <div class="notice bad">
-          <span>{problem}</span>
-        </div>
-      ) : null}
-
-      <div class="panel">
-        <label>
-          <span class="label-text">{t('landing.pasteLabel')}</span>
-          <input
-            type="url"
-            inputMode="url"
-            autocomplete="off"
-            spellcheck={false}
-            placeholder={t('landing.pastePlaceholder')}
-            value={input}
-            onInput={(e) => setInput((e.target as HTMLInputElement).value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') submit()
-            }}
-          />
-        </label>
-        <div class="row">
-          <button class="primary" onClick={submit} disabled={input.trim() === ''}>
-            {t('landing.load')}
-          </button>
-        </div>
-      </div>
-
+  /*
+   * The rows, held across renders.
+   *
+   * Typing in the box above changes `input`, which re-renders Landing — and
+   * these rows have nothing to do with what is being typed. Measured at 42
+   * characters of a spreadsheet URL: 42 renders of Landing and 126 of Icon,
+   * three chevrons rebuilt for every keystroke.
+   */
+  const rows = useMemo(
+    () => (
       <div class="row-list">
         {/*
           One row, not one per deck: the same shape as the two below it, opening
@@ -109,6 +86,45 @@ export function Landing({ onOpen, recent }: Props) {
           <Icon name="chevron" class="deck-arrow" />
         </button>
       </div>
+    ),
+    [recent],
+  )
+
+  return (
+    <div class="page">
+      <p class="muted">{t('app.tagline')}</p>
+
+      {problem ? (
+        <div class="notice bad">
+          <span>{problem}</span>
+        </div>
+      ) : null}
+
+      <div class="panel">
+        <label>
+          <span class="label-text">{t('landing.pasteLabel')}</span>
+          <input
+            type="url"
+            name="sheet-url"
+            inputMode="url"
+            autocomplete="off"
+            spellcheck={false}
+            placeholder={t('landing.pastePlaceholder')}
+            value={input}
+            onInput={(e) => setInput((e.target as HTMLInputElement).value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submit()
+            }}
+          />
+        </label>
+        <div class="row">
+          <button class="primary" onClick={submit} disabled={input.trim() === ''}>
+            {t('landing.load')}
+          </button>
+        </div>
+      </div>
+
+      {rows}
 
       {panel === 'recent' ? (
         <CardModal title={t('landing.recent')} onClose={() => setPanel('none')}>

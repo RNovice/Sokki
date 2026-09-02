@@ -17,9 +17,12 @@ import {
  * there to be no path an injection could take rather than a filter it has to
  * get past. A card reading `<script>alert(1)</script>` shows those characters.
  *
- * Children are deliberately unkeyed. They are derived from the text by
- * position, so index reconciliation — which is what Preact does without keys —
- * is already the correct pairing; keys would add noise and change nothing.
+ * Children are keyed by index, and here that is not the usual mistake: these
+ * nodes have no identity apart from where they sit. They are produced by
+ * walking one string from left to right, so position *is* the identity, and
+ * two renders of the same text always produce the same node at the same index.
+ * The keys change nothing about how Preact reconciles them — they say why it is
+ * safe.
  */
 
 interface Props {
@@ -50,18 +53,22 @@ export function CardText({ text, markdown, class: className }: Props) {
 /* ----------------------------------------------------------------- rendering */
 
 function inline(nodes: Inline[]): ComponentChildren {
-  return nodes.map((node) => {
+  return nodes.map((node, i) => {
     switch (node.type) {
       case 'text':
         return node.value
       case 'code':
-        return <code class="md-code">{node.value}</code>
+        return (
+          <code key={i} class="md-code">
+            {node.value}
+          </code>
+        )
       case 'strong':
-        return <strong>{inline(node.children)}</strong>
+        return <strong key={i}>{inline(node.children)}</strong>
       case 'em':
-        return <em>{inline(node.children)}</em>
+        return <em key={i}>{inline(node.children)}</em>
       case 'strike':
-        return <s>{inline(node.children)}</s>
+        return <s key={i}>{inline(node.children)}</s>
     }
   })
 }
@@ -95,8 +102,8 @@ function block(node: Block): ComponentChildren {
     case 'list':
       return (
         <ul class="md-list">
-          {node.items.map((item) => (
-            <li>{inline(item)}</li>
+          {node.items.map((item, i) => (
+            <li key={i}>{inline(item)}</li>
           ))}
         </ul>
       )

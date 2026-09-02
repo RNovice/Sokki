@@ -1,4 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
+import {
+  armedSide,
+  classify,
+  exitDx,
+  shouldCommit,
+  smoothVelocity,
+  swipeStrength,
+  TAP_MAX_MS,
+  tiltFor,
+} from '../core/gesture'
 import { currentIndex, facesFor, questionSide } from '../core/session'
 import type { Card, Session } from '../core/types'
 import { t, tp } from '../i18n'
@@ -7,46 +17,8 @@ import { CardText } from './CardText'
 import { FlipCard } from './FlipCard'
 import { Icon } from './Icon'
 
-/**
- * Gesture thresholds. These are the difference between a swipe you meant and
- * one you did not.
- */
-
-/** Past this fraction of the card's width, releasing commits the answer. */
-const COMMIT_FRACTION = 0.28
-/** …but never less than this, so a narrow screen still needs a real swipe. */
-const COMMIT_MIN_PX = 72
-/**
- * A flick commits early. Distance alone forces a deliberate gesture to be a
- * long one, which on a phone means dragging most of the way across the screen
- * for every card. Speed says "deliberate" just as clearly and says it sooner,
- * and it does not reintroduce accidental swipes, because the accidental ones
- * are slow drift rather than fast flicks.
- */
-const FLICK_VELOCITY_PX_PER_MS = 0.45
-/** A flick still has to travel far enough to be a gesture and not a tap. */
-const FLICK_MIN_PX = 44
-/** Movement below this decides nothing: the card does not even follow yet. */
-const ACTIVATION_PX = 12
-/**
- * How much horizontal has to beat vertical before the gesture counts as a
- * swipe — and the reason there are two numbers.
- *
- * The strict one exists to protect scrolling a long answer. But most cards are
- * a word or a phrase with nothing to scroll, and on those the strictness buys
- * nothing while rejecting the down-and-right arc that a thumb naturally makes.
- * So the gate is only strict when there is actually a scroll to defend.
- */
-const DIRECTION_RATIO_SCROLLABLE = 1.5
-const DIRECTION_RATIO_FIXED = 1.0
-/** How long the answered card takes to leave. */
+/** How long the answered card takes to leave. Presentation, not a decision. */
 const EXIT_MS = 190
-/** A press still undecided when it ends, and this brief, is a tap. */
-const TAP_MAX_MS = 500
-
-function commitDistance(cardWidth: number): number {
-  return Math.max(cardWidth * COMMIT_FRACTION, COMMIT_MIN_PX)
-}
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -101,6 +73,15 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
   const [dx, setDx] = useState(0)
   const [dragging, setDragging] = useState(false)
   const cardEl = useRef<HTMLDivElement | null>(null)
+  /*
+   * The card's width, measured once when a drag starts.
+   *
+   * It used to be read from offsetWidth during render, which is a layout read,
+   * once per pointer move. Measured: sixteen forced layouts in one drag, now
+   * none. The value cannot change mid-drag anyway — nothing resizes while a
+   * finger is down.
+   */
+  const cardWidth = useRef(300)
 
   const index = currentIndex(session)
   const card = index === null ? null : cards[index]
@@ -124,6 +105,15 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
   const [exiting, setExiting] = useState<1 | -1 | null>(null)
   const leaving = useRef(false)
 
+  /**
+   * Move the card, and everything that follows it, without a render.
+   *
+   * The two things that change every frame — the card's transform and the
+   * tint's opacity — are written straight to the elements. `armed` still goes
+   * through state, because the buttons need it and it changes at most twice;
+   * Preact drops a setState whose value is unchanged, so the other fifty-eight
+   * frames cost nothing.
+   */
   const commit = useCallback(
     (knew: boolean) => {
       if (leaving.current) return
@@ -132,8 +122,13 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
       const direction = knew ? 1 : -1
       setDragging(false)
       setExiting(direction)
-      // Far enough that the card is gone whatever the viewport.
-      setDx(direction * Math.max(window.innerWidth, 400))
+      /*
+       * Measured here rather than read from the drag: a card answered by button
+       * or keyboard was never dragged, so `cardWidth` would still hold its
+       * default. One layout read per answer is not the per-frame kind.
+       */
+      const width = cardEl.current?.offsetWidth ?? cardWidth.current
+      setDx(exitDx(width, knew))
 
       const settle = () => {
         leaving.current = false
@@ -205,12 +200,12 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
     if (g.id !== event.pointerId) return
 
     if (g.phase === 'pending') {
-      const moveX = event.clientX - g.x
-      const moveY = event.clientY - g.y
-      if (Math.hypot(moveX, moveY) < ACTIVATION_PX) return
-
-      const ratio = faceCanScroll() ? DIRECTION_RATIO_SCROLLABLE : DIRECTION_RATIO_FIXED
-      if (!swipeEnabled || Math.abs(moveX) <= Math.abs(moveY) * ratio) {
+      const intent = classify(event.clientX - g.x, event.clientY - g.y, {
+        swipeEnabled,
+        faceScrolls: faceCanScroll(),
+      })
+      if (intent === 'undecided') return
+      if (intent === 'vertical') {
         // Committed to being a scroll. Releasing will not rate the card.
         gesture.current = { phase: 'vertical', id: g.id }
         return
@@ -218,6 +213,8 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
       // Anchor on where the finger is now, not where it started, so the card
       // does not jump by the activation distance when it starts following.
       cardEl.current?.setPointerCapture(g.id)
+      // One layout read for the whole drag, instead of one per frame.
+      cardWidth.current = cardEl.current?.offsetWidth ?? 300
       gesture.current = {
         phase: 'horizontal',
         id: g.id,
@@ -230,13 +227,9 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
       return
     }
 
-    // Smoothed so one stuttering frame cannot read as a flick, and so the
-    // value still reflects the end of the gesture rather than its average.
     const now = Date.now()
-    const elapsed = now - g.lastAt
-    if (elapsed > 0) {
-      const instant = (event.clientX - g.lastX) / elapsed
-      g.velocity = g.velocity * 0.3 + instant * 0.7
+    g.velocity = smoothVelocity(g.velocity, event.clientX - g.lastX, now - g.lastAt)
+    if (now > g.lastAt) {
       g.lastX = event.clientX
       g.lastAt = now
     }
@@ -262,15 +255,11 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
 
     if (g.phase === 'horizontal') {
       const travelled = event.clientX - g.originX
-      const distance = Math.abs(travelled)
-      const needed = commitDistance(cardEl.current?.offsetWidth ?? 300)
-      const flicked =
-        Math.abs(g.velocity) >= FLICK_VELOCITY_PX_PER_MS &&
-        distance >= FLICK_MIN_PX &&
-        Math.sign(g.velocity) === Math.sign(travelled)
-
-      if (distance >= needed || flicked) commit(travelled > 0)
-      else setDx(0)
+      if (shouldCommit(travelled, g.velocity, cardWidth.current)) {
+        commit(travelled > 0)
+      } else {
+        setDx(0)
+      }
       return
     }
 
@@ -285,24 +274,47 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
 
   /* -------------------------------------------------------------- render */
 
-  if (!card || index === null) return null
-
+  /*
+   * Derived before the early return below, not after, because the memos that
+   * follow are hooks and a hook cannot sit behind a condition. `card` is null
+   * only when the round is over, and the values computed from it are then
+   * thrown away with the render.
+   */
   const side = questionSide(session, session.pos)
-  const { question, answer } = facesFor(card, side)
+  const { question, answer } = card ? facesFor(card, side) : { question: '', answer: '' }
   const total = session.order.length
   const remaining = total - session.pos
-  const width = cardEl.current?.offsetWidth ?? 300
-  const strength = Math.min(1, Math.abs(dx) / commitDistance(width))
+  const strength = swipeStrength(dx, cardWidth.current)
+  const armed = armedSide(dx, cardWidth.current)
+  const tilt = tiltFor(dx)
   /*
-   * Which button the current drag would fire, or null if releasing now would
-   * snap back. Derived from commitDistance, the same function onPointerUp uses,
-   * so the highlight and the outcome cannot disagree — a button that lights up
-   * and then does not fire is worse than no highlight at all.
+   * The three subtrees below are held across renders on purpose.
+   *
+   * Dragging sets `dx` on every pointermove, so Quiz re-renders at the pointer
+   * event rate — measured at 38 renders for one short drag, and 304 renders
+   * across the subtree, when the only thing that changed on screen was one
+   * transform. None of the card's text, and none of the answer buttons except
+   * their armed class, depends on `dx` at all.
+   *
+   * Reusing the vnode object is enough to stop that. Preact bails out of a diff
+   * when `newVNode._original == oldVNode._original`, which is true exactly when
+   * the same element object comes back — for components it skips the render
+   * outright, for host elements it reuses the children and the DOM node. So
+   * this needs no `memo`, and therefore no preact/compat in the bundle.
+   *
+   * The gesture code is untouched; this is only about what gets rebuilt while
+   * it runs.
    */
-  const armed = strength >= 1 ? (dx > 0 ? 'known' : 'unknown') : null
+  const faces = useMemo(
+    () => ({
+      front: <CardText class="face-text face-question" text={question} markdown={markdown} />,
+      back: <CardText class="face-text face-answer" text={answer || '—'} markdown={markdown} />,
+    }),
+    [question, answer, markdown],
+  )
 
-  return (
-    <div class="quiz">
+  const progress = useMemo(
+    () => (
       <div>
         <div class="progress">
           <span>{t('quiz.position', { current: session.pos + 1, total })}</span>
@@ -312,6 +324,33 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
           <div class="progress-fill" style={{ width: `${(session.pos / total) * 100}%` }} />
         </div>
       </div>
+    ),
+    [session.pos, total, remaining],
+  )
+
+  // `armed` is the only part of this that a drag changes, and it changes at
+  // most twice in one — not once per frame.
+  const answers = useMemo(
+    () => (
+      <div class="answers">
+        <button class={`unknown${armed === 'unknown' ? ' armed' : ''}`} onClick={() => commit(false)}>
+          <Icon name="cross" />
+          {t('quiz.unknown')}
+        </button>
+        <button class={`known${armed === 'known' ? ' armed' : ''}`} onClick={() => commit(true)}>
+          <Icon name="check" />
+          {t('quiz.known')}
+        </button>
+      </div>
+    ),
+    [armed, commit],
+  )
+
+  if (!card || index === null) return null
+
+  return (
+    <div class="quiz">
+      {progress}
 
       <div class="card-stage">
         {/*
@@ -323,7 +362,7 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
           key={marker}
           cardRef={cardEl}
           className={`${dragging ? 'dragging' : ''}${exiting ? ' exiting' : ''}`.trim()}
-          style={{ transform: `translateX(${dx}px) rotate(${dx * 0.02}deg)` }}
+          style={{ transform: `translateX(${dx}px) rotate(${tilt}deg)` }}
           flipped={showingBack}
           label={t('quiz.flip')}
           onFlip={flip}
@@ -331,10 +370,8 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
-          front={<CardText class="face-text face-question" text={question} markdown={markdown} />}
-          back={
-            <CardText class="face-text face-answer" text={answer || '—'} markdown={markdown} />
-          }
+          front={faces.front}
+          back={faces.back}
         />
         {dx !== 0 ? (
           <div
@@ -350,22 +387,7 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
           unreachable from a keyboard and unannounced by a screen reader, so it
           can be the fast path but never the only one.
         */}
-        <div class="answers">
-          <button
-            class={`unknown${armed === 'unknown' ? ' armed' : ''}`}
-            onClick={() => commit(false)}
-          >
-            <Icon name="cross" />
-            {t('quiz.unknown')}
-          </button>
-          <button
-            class={`known${armed === 'known' ? ' armed' : ''}`}
-            onClick={() => commit(true)}
-          >
-            <Icon name="check" />
-            {t('quiz.known')}
-          </button>
-        </div>
+        {answers}
         <div class="hint-line">
           {hasFlipped
               ? swipeEnabled

@@ -39,6 +39,7 @@ export function SettingsSheet({ settings, onSettings, hasRecent, onClearRecent, 
 
         <div class="field-group">
           <SelectField
+            name="locale"
             label={t('settings.language')}
             value={settings.locale}
             onChange={(value) => onSettings({ locale: value as Locale })}
@@ -49,6 +50,7 @@ export function SettingsSheet({ settings, onSettings, hasRecent, onClearRecent, 
           </SelectField>
 
           <SelectField
+            name="theme"
             label={t('settings.theme')}
             value={settings.theme}
             onChange={(value) => onSettings({ theme: value as ThemeName | 'system' })}
@@ -62,6 +64,7 @@ export function SettingsSheet({ settings, onSettings, hasRecent, onClearRecent, 
           </SelectField>
 
           <ToggleField
+            name="swipe"
             label={t('settings.swipe')}
             checked={settings.swipeEnabled}
             onChange={(checked) => onSettings({ swipeEnabled: checked })}

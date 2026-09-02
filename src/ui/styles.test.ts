@@ -87,6 +87,39 @@ describe('iOS zoom', () => {
   })
 })
 
+describe('scrollbars', () => {
+  const RULE = 'html,\n.card-surface,\n.card-face,\n.card-modal-scroll,\n.sheet'
+
+  it('take their colour from the theme, not the platform', () => {
+    // A device-default scrollbar is the one piece of chrome a theme cannot
+    // reach: Windows draws a light track that reads as a fault on a dark theme.
+    expect(block(RULE)).toMatch(/scrollbar-color:\s*var\(--muted\) transparent/)
+  })
+
+  it('name every scroll container, because scrollbar-width does not inherit', () => {
+    // scrollbar-color inherits and scrollbar-width does not. Declared on the
+    // root alone, a card face comes back with the colour and `width: auto`.
+    for (const container of ['.card-face', '.card-modal-scroll', '.sheet']) {
+      expect(RULE).toContain(container)
+    }
+    expect(block(RULE)).toMatch(/scrollbar-width:\s*thin/)
+  })
+
+  it('style them with the standard properties, not ::-webkit-scrollbar', () => {
+    // The webkit pseudo-element would make consistency worse: iOS Safari
+    // ignores it, and on macOS it turns overlay scrollbars into ones that take
+    // layout width away from every card that scrolls.
+    expect(DECLARATIONS).not.toContain('::-webkit-scrollbar')
+  })
+
+  it('uses --muted for the thumb rather than --hairline', () => {
+    // Measured across the ten themes, --hairline sits at 1.2–1.9 against the
+    // grounds a thumb is drawn on — under the 3:1 minimum for a non-text
+    // control, and this is the only thing saying a card has more to show.
+    expect(block(RULE)).not.toMatch(/scrollbar-color:\s*var\(--hairline\)/)
+  })
+})
+
 describe('text selection', () => {
   const LOCKED = 'button,\n.progress,\n.hint-line,\n.section-label,\n.label-text,\n.toggle,\n.banner,\n.deck-headline .muted'
 

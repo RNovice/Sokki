@@ -1,5 +1,6 @@
 export default {
   'app.name': '速記卡',
+  'app.title': '速記卡 Sokki — 把 Google Sheet 變成速記卡',
   'app.tagline': '把一份 Google Sheet 變成速記卡。不需要帳號，我們不保存你的任何資料。',
 
   'common.back': '返回',

@@ -1,9 +1,12 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="description" content="把一份 Google Sheet 變成速記卡。不需要帳號，不保存你的任何資料。" />
+    <meta
+      name="description"
+      content="Turn a Google Sheet into flashcards. No account, and we keep none of your data."
+    />
     <meta name="theme-color" content="#f6f7f5" />
 
     <!--
@@ -14,21 +17,22 @@
       The title is written to be read by all three audiences at once: 速記卡 is
       Traditional Chinese, 速記 alone is a Japanese word, and Sokki carries it
       for anyone reading neither. The description gives each language its own
-      line. Most clients collapse those newlines into one run of text, which is
-      why every line ends in its own full stop.
+      line, English first because that is the app's default and the language of
+      the shell below. Most clients collapse those newlines into one run of
+      text, which is why every line ends in its own full stop.
     -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="速記卡 Sokki" />
     <meta property="og:title" content="速記卡 Sokki" />
     <meta
       property="og:description"
-      content="把一份 Google Sheet 變成速記卡。
-Turn a Google Sheet into flashcards.
+      content="Turn a Google Sheet into flashcards.
+把一份 Google Sheet 變成速記卡。
 Google スプレッドシートをフラッシュカードに。"
     />
     <meta property="og:url" content="%SITE_ORIGIN%/" />
-    <meta property="og:locale" content="zh_TW" />
-    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="zh_TW" />
     <meta property="og:locale:alternate" content="ja_JP" />
     <!--
       `summary`, not `summary_large_image`. There is deliberately no image: one
@@ -45,7 +49,36 @@ Google スプレッドシートをフラッシュカードに。"
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="icon" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
-    <title>速記卡 Sokki</title>
+    <!-- The canonical link is injected by the `site-origin` plugin, not written
+         here: Vite resolves every <link href> through its asset pipeline, and a
+         placeholder that is empty at build time resolves to a directory. -->
+    <!-- Must stay identical to `app.title` in src/i18n/en.ts: the app rewrites
+         document.title on mount, and any difference is a visible flicker in the
+         tab for every reader on the default locale. -->
+    <title>Sokki — Turn a Google Sheet into flashcards</title>
+
+    <!--
+      A data block, not a script: the browser never runs it, so the CSP does not
+      govern it and scripts/seal-csp.mjs skips it. Every deck URL carries the
+      same canonical above, which is what tells a crawler that `?s=…` is not a
+      page of its own — there is an unbounded number of those and none of them
+      is ours to publish.
+    -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "速記卡 Sokki",
+        "url": "%SITE_ORIGIN%/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "inLanguage": ["en", "zh-Hant", "ja"],
+        "description": "Turn a Google Sheet into flashcards. No account, and we keep none of your data.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "isAccessibleForFree": true
+      }
+    </script>
     <script>
       /*
        * Deliberately blocking, and deliberately before the stylesheet.
@@ -74,14 +107,28 @@ Google スプレッドシートをフラッシュカードに。"
            * flash of white on a dark screen, the exact thing this script exists
            * to prevent.
            */
-          if (theme && colors[theme]) {
+          /*
+           * Painting the ground here, not waiting for the stylesheet.
+           *
+           * `--bg` lives in the external CSS, and until that arrives the page
+           * canvas is the browser's default white. That used to be invisible
+           * because #app was empty and there was nothing to paint; now that
+           * index.html carries the landing page, the browser has a reason to
+           * paint before the stylesheet lands, and a dark theme flashes white.
+           * Setting it on <html> costs one property and is the only paint that
+           * can happen this early.
+           */
+          var ground = theme && colors[theme]
+          if (!ground) {
+            ground = window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? colors.dark
+              : colors.light
+          } else {
             document.documentElement.setAttribute('data-theme', theme)
-            var meta = document.querySelector('meta[name="theme-color"]')
-            if (meta) meta.content = colors[theme]
-          } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            var m = document.querySelector('meta[name="theme-color"]')
-            if (m) m.content = '#0f1315'
           }
+          document.documentElement.style.background = ground
+          var meta = document.querySelector('meta[name="theme-color"]')
+          if (meta) meta.content = ground
           var lang = saved ? JSON.parse(saved).locale : null
           if (lang) document.documentElement.lang = lang
         } catch (e) {

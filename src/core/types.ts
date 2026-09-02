@@ -47,7 +47,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  locale: 'zh-Hant',
+  locale: 'en',
   theme: 'system',
   swipeEnabled: true,
 }

@@ -82,7 +82,7 @@ export function detectLocale(): Locale {
     if (lower.startsWith('zh')) return 'zh-Hant'
     if (lower.startsWith('en')) return 'en'
   }
-  return 'zh-Hant'
+  return 'en'
 }
 
 export function loadSettings(): Settings {

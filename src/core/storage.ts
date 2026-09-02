@@ -71,7 +71,7 @@ function ourKeys(): string[] {
   }
 }
 
-export function sessionKeys(): string[] {
+function sessionKeys(): string[] {
   return ourKeys().filter((k) => k.startsWith(`${NAMESPACE}:session:`))
 }
 
@@ -83,7 +83,7 @@ function evictOldestSessions(howMany: number): boolean {
         const value: unknown = JSON.parse(localStorage.getItem(k) ?? 'null')
         const startedAt =
           typeof value === 'object' && value !== null && 'startedAt' in value
-            ? Number((value as { startedAt: unknown }).startedAt)
+            ? Number(value.startedAt)
             : 0
         return { k, startedAt: Number.isFinite(startedAt) ? startedAt : 0 }
       } catch {

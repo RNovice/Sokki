@@ -5,16 +5,22 @@ node_modules
 dist
 dev-dist
 
-# Local environment. .env.example is committed; anything real is not.
+# Local environment. Secrets are not committed; two files are.
+#
+# .env.example documents what exists. .env.production carries the site origin,
+# which is public by definition — it is the address people type — and has to be
+# in the repo, because a build that cannot see it drops the canonical link and
+# sitemap.xml without failing.
 .env
 .env.*
 !.env.example
+!.env.production
 
 # Tooling caches and scratch
 .vite
+.wrangler
 coverage
 *.log
-.eslintcache
 .playwright-mcp
 
 # Editors and OS

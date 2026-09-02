@@ -1,5 +1,6 @@
 export default {
   'app.name': 'Sokki',
+  'app.title': 'Sokki — Turn a Google Sheet into flashcards',
   'app.tagline': 'Turn a Google Sheet into flashcards. No account, and we keep none of your data.',
 
   'common.back': 'Back',

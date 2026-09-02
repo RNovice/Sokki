@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useCallback, useMemo, useRef, useState } from 'preact/hooks'
 import { sheetEditUrl, shareUrl } from '../core/deck'
 import type { DeckRef } from '../core/types'
 import { t } from '../i18n'
@@ -38,9 +38,18 @@ export function ShareSheet({ deckRef, name, markdown, onClose }: Props) {
   const link = shareUrl(named, markdown)
   const editUrl = sheetEditUrl(deckRef)
 
-  async function copy() {
+  /*
+   * The link goes in a ref as well as being rendered, so that `copy` does not
+   * close over it. Otherwise `copy` is a new function on every keystroke — the
+   * URL contains the name being typed — and the row it sits in cannot be held
+   * across renders.
+   */
+  const latestLink = useRef(link)
+  latestLink.current = link
+
+  const copy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(link)
+      await navigator.clipboard.writeText(latestLink.current)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
@@ -48,7 +57,37 @@ export function ShareSheet({ deckRef, name, markdown, onClose }: Props) {
       const field = document.getElementById('share-link') as HTMLInputElement | null
       field?.select()
     }
-  }
+  }, [])
+
+  // Neither of these depends on what is being typed into the name field.
+  const head = useMemo(
+    () => (
+      <div class="sheet-head">
+        <h2>{t('share.title')}</h2>
+        <button class="quiet icon-only" onClick={onClose} aria-label={t('common.close')}>
+          <Icon name="close" />
+        </button>
+      </div>
+    ),
+    [onClose],
+  )
+
+  const actions = useMemo(
+    () => (
+      <div class="row share-actions">
+        <button class="primary" onClick={() => void copy()}>
+          <Icon name={copied ? 'check' : 'share'} />
+          {copied ? t('share.copied') : t('share.copy')}
+        </button>
+        {editUrl ? (
+          <a class="muted" href={editUrl} target="_blank" rel="noreferrer">
+            {t('share.openSheet')}
+          </a>
+        ) : null}
+      </div>
+    ),
+    [copied, editUrl, copy],
+  )
 
   return (
     <div
@@ -58,12 +97,7 @@ export function ShareSheet({ deckRef, name, markdown, onClose }: Props) {
       }}
     >
       <div class="sheet" role="dialog" aria-modal="true" aria-label={t('share.title')}>
-        <div class="sheet-head">
-          <h2>{t('share.title')}</h2>
-          <button class="quiet icon-only" onClick={onClose} aria-label={t('common.close')}>
-            <Icon name="close" />
-          </button>
-        </div>
+        {head}
 
         <div class="field-group">
             {deckRef.kind === 'sheet' ? (
@@ -71,6 +105,7 @@ export function ShareSheet({ deckRef, name, markdown, onClose }: Props) {
                 <span class="label-text">{t('share.nameLabel')}</span>
                 <input
                   type="text"
+                  name="share-name"
                   value={title}
                   placeholder={t('share.namePlaceholder')}
                   onInput={(e) => setTitle((e.target as HTMLInputElement).value)}
@@ -80,20 +115,10 @@ export function ShareSheet({ deckRef, name, markdown, onClose }: Props) {
 
             <label>
               <span class="label-text">URL</span>
-              <input id="share-link" type="text" readOnly value={link} />
+              <input id="share-link" name="share-link" type="text" readOnly value={link} />
             </label>
 
-          <div class="row share-actions">
-            <button class="primary" onClick={() => void copy()}>
-              <Icon name={copied ? 'check' : 'share'} />
-              {copied ? t('share.copied') : t('share.copy')}
-            </button>
-            {editUrl ? (
-              <a class="muted" href={editUrl} target="_blank" rel="noreferrer">
-                {t('share.openSheet')}
-              </a>
-            ) : null}
-          </div>
+          {actions}
         </div>
       </div>
     </div>

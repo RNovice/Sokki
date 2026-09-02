@@ -27,6 +27,40 @@ body {
   overscroll-behavior-y: none;
 }
 
+/*
+ * Scrollbars, in the theme's colours rather than the platform's.
+ *
+ * A device-default scrollbar is the one piece of chrome a theme could not
+ * reach: Windows draws a light-grey track that reads as a rendering fault on a
+ * dark theme, and each platform draws something different.
+ *
+ * Every scroll container is named, not just the root, because only one of these
+ * two properties inherits. `scrollbar-color` does; `scrollbar-width` does not —
+ * measured, a card face declared on the root alone came back with the colour
+ * applied and `scrollbar-width: auto`.
+ *
+ * Deliberately not `::-webkit-scrollbar`. It offers more control and would make
+ * consistency *worse*: iOS Safari ignores it, so styling it there produces one
+ * appearance on iOS and another everywhere else — and on macOS it switches
+ * Chrome from overlay scrollbars to ones that occupy layout width, narrowing
+ * every card that scrolls. The standard properties change the colour without
+ * touching either behaviour.
+ *
+ * The thumb is --muted, not --hairline. A hairline is right for a 1px border
+ * and wrong here: measured across the ten themes it sits at 1.2–1.9 against the
+ * grounds it is drawn on, and this is the only thing telling a reader there is
+ * more of a card to see. --muted is the one token that clears 3:1 — the
+ * non-text contrast minimum — everywhere, at 4.9–7.2.
+ */
+html,
+.card-surface,
+.card-face,
+.card-modal-scroll,
+.sheet {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
 body {
   background: var(--bg);
   color: var(--ink);
@@ -704,14 +738,6 @@ p {
 .card-body .row-link {
   padding: 9px 12px;
   min-height: 44px;
-}
-
-.card-turn {
-  margin-top: auto;
-  padding-top: 6px;
-  font-size: 12px;
-  color: var(--muted);
-  text-align: center;
 }
 
 .face-flip-mark {

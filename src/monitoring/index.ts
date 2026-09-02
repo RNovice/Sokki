@@ -10,9 +10,14 @@
  * consent banner and contradicts nothing. Everything reported from here is
  * about the code: timings, and the fact that an error happened. Never a card,
  * never a spreadsheet id, never a URL that contains one.
+ *
+ * Core Web Vitals are deliberately *not* measured here. Cloudflare's beacon
+ * already collects LCP, INP and CLS, with the element selector attached, which
+ * is more than the `web-vitals` package was reporting — and that package was
+ * being downloaded, 3.1 KB gzipped, to feed a function that discarded every
+ * value because no telemetry endpoint is configured. Two sources for one number
+ * is one too many, and this was the one that cost bytes.
  */
-
-import type { CLSMetric, INPMetric, LCPMetric } from 'web-vitals'
 
 /** Beyond these, a measurement is worth sending. Under them it is noise. */
 const THRESHOLDS = {
@@ -41,7 +46,6 @@ export function startMonitoring(): void {
   if (enabled) return
   enabled = true
   watchErrors()
-  void watchVitals()
 }
 
 /**
@@ -88,22 +92,6 @@ function reportError(message: string, source?: string, line?: number): void {
     source: (source ?? '').slice(0, 120),
     line: line ?? 0,
   })
-}
-
-/* -------------------------------------------------------------- web vitals */
-
-async function watchVitals(): Promise<void> {
-  try {
-    const { onCLS, onINP, onLCP } = await import('web-vitals')
-    const send = (metric: CLSMetric | INPMetric | LCPMetric) => {
-      report('vital', { name: metric.name, value: Math.round(metric.value), rating: metric.rating })
-    }
-    onCLS(send)
-    onINP(send)
-    onLCP(send)
-  } catch {
-    /* metrics are optional; the app is not */
-  }
 }
 
 /* -------------------------------------------------------- app-level timings */

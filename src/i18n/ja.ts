@@ -1,5 +1,6 @@
 export default {
   'app.name': '速記カード',
+  'app.title': 'Sokki 速記カード — Google スプレッドシートをフラッシュカードに',
   'app.tagline': 'Google スプレッドシートをフラッシュカードに。アカウント不要、データは一切保存しません。',
 
   'common.back': '戻る',
