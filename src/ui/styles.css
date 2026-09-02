@@ -1074,14 +1074,37 @@ p {
   position: fixed;
   inset: 0;
   background: rgb(0 0 0 / 45%);
+  /* The one separation cue that does not depend on luminance; see .sheet for
+     why that matters. Unsupported means no blur, and the rest still holds. */
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   z-index: 30;
   display: flex;
   align-items: flex-end;
   justify-content: center;
 }
 
+/*
+ * A sheet has to look like it is *above* the page, and on a dark theme that is
+ * not something the backdrop can do for it. The backdrop is black at 45%, so
+ * all it can do is multiply the page down — which is a large step on a light
+ * ground and no step at all on a near-black one. Measured: the sheet edge is
+ * 3.07–3.31 against the dimmed page in the light themes and 1.03–1.14 in the
+ * dark ones, where 1.00 is invisible. Deepening the backdrop does not help
+ * either; at 85% black, `dark` only reaches 1.11, because near black the
+ * contrast formula is dominated by its own +0.05 term.
+ *
+ * So the separation is built rather than dimmed for: the sheet sits on the
+ * raised surface, carries the same hairline every card in the app has, and the
+ * backdrop is blurred behind it. The three are needed together — the raised
+ * surface and the hairline do most of the work, and the blur adds the one cue
+ * that does not depend on luminance at all, since sharp content over soft
+ * content reads as two layers however dark both are. Where blur is
+ * unsupported the other two still stand.
+ */
 .sheet {
-  background: var(--bg);
+  background: var(--raised);
+  border: 1px solid var(--hairline);
   border-top-left-radius: 14px;
   border-top-right-radius: 14px;
   width: 100%;
