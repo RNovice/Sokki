@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  clearRecent,
+  forgetDeck,
   loadRecent,
   MAX_RECENT,
   refFromRecent,
@@ -114,10 +114,44 @@ describe('round trip and clearing', () => {
     })
   })
 
-  it('clears', () => {
-    rememberDeck(sheet('abc'), 25, tick())
-    clearRecent()
-    expect(loadRecent()).toEqual([])
+})
+
+/**
+ * Removing one deck replaced a single button that emptied the whole list.
+ * That button was also the only way to remove anything, so it was what people
+ * reached for to remove one thing — and the list is the only place the app
+ * records which sheets have been opened, so emptying it can lose the only
+ * route back to a spreadsheet whose link the reader no longer has.
+ */
+describe('forgetting one deck', () => {
+  it('removes just that one and leaves the rest in order', () => {
+    rememberDeck(sheet('a'), 10, tick())
+    rememberDeck(sheet('b'), 20, tick())
+    rememberDeck(sheet('c'), 30, tick())
+    const left = forgetDeck({ sheetId: 'b', gid: '0', lastOpened: 0, cardCount: 20 })
+    expect(left.map((e) => e.sheetId)).toEqual(['c', 'a'])
+    expect(loadRecent().map((e) => e.sheetId)).toEqual(['c', 'a'])
+  })
+
+  it('tells one tab of the same sheet from another', () => {
+    rememberDeck(sheet('a', '0'), 10, tick())
+    rememberDeck(sheet('a', '77'), 20, tick())
+    const left = forgetDeck({ sheetId: 'a', gid: '77', lastOpened: 0, cardCount: 20 })
+    expect(left).toHaveLength(1)
+    expect(left[0]!.gid).toBe('0')
+  })
+
+  it('writes nothing down once the last one is gone', () => {
+    // Removing everything should leave nothing behind, not an empty list: the
+    // reader has just said they do not want this recorded.
+    rememberDeck(sheet('a'), 10, tick())
+    expect(forgetDeck({ sheetId: 'a', gid: '0', lastOpened: 0, cardCount: 10 })).toEqual([])
+    expect(localStorage.getItem('sokki:recent')).toBeNull()
+  })
+
+  it('is a no-op for a deck that is not in the list', () => {
+    rememberDeck(sheet('a'), 10, tick())
+    expect(forgetDeck({ sheetId: 'zz', gid: '0', lastOpened: 0, cardCount: 1 })).toHaveLength(1)
   })
 })
 

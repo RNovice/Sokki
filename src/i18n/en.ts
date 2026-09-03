@@ -18,6 +18,7 @@ export default {
   'landing.recent': 'Recently opened',
   'landing.recentCount.one': '{n} deck you opened recently',
   'landing.recentCount.other': '{n} decks you opened recently',
+  'recent.forget': 'Remove {name} from recent decks',
   'landing.examples': 'Try one now',
   'landing.examplesSub': 'Four ready-made decks, nothing to prepare',
   'landing.howtoSub': 'Column A asks, column B answers — three steps',
@@ -89,7 +90,6 @@ export default {
   'settings.countAll': 'All',
   'settings.shuffle': 'Shuffle',
   'settings.markdown': 'Markdown formatting',
-  'settings.clearRecent': 'Clear recent decks',
 
   'direction.front-back': 'Front → Back',
   'direction.back-front': 'Back → Front',

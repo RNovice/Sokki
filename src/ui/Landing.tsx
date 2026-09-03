@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'preact/hooks'
 import { BUILTIN_DECKS, markdownFromInput, parseSheetInput } from '../core/deck'
-import { refFromRecent, type RecentDeck } from '../core/recent'
+import { forgetDeck, refFromRecent, type RecentDeck } from '../core/recent'
 import type { DeckRef } from '../core/types'
 import { currentLocale, formatRelativeTime, t, tp } from '../i18n'
 import { CardModal } from './CardModal'
@@ -12,8 +12,9 @@ interface Props {
    * means it did not, and the reader's own preference for the deck stands.
    */
   onOpen: (ref: DeckRef, markdown?: boolean) => void
-  /** Owned by App so that clearing it from the settings sheet is visible here. */
   recent: RecentDeck[]
+  /** Owned by App, which holds the list; this reports what is left of it. */
+  onRecentChange: (next: RecentDeck[]) => void
 }
 
 type Panel = 'none' | 'recent' | 'examples' | 'howto'
@@ -24,7 +25,7 @@ type Panel = 'none' | 'recent' | 'examples' | 'howto'
  * opens a panel rather than expanding in place, so the page never reflows under
  * the reader and its height does not depend on how much they have used it.
  */
-export function Landing({ onOpen, recent }: Props) {
+export function Landing({ onOpen, recent, onRecentChange }: Props) {
   const [input, setInput] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
   const [panel, setPanel] = useState<Panel>('none')
@@ -148,24 +149,42 @@ export function Landing({ onOpen, recent }: Props) {
       {panel === 'recent' ? (
         <CardModal title={t('landing.recent')} onClose={() => setPanel('none')}>
           <div class="row-list">
-            {recent.map((entry) => (
-              <button
-                key={`${entry.sheetId}:${entry.gid}`}
-                class="row-link"
-                onClick={() => onOpen(refFromRecent(entry))}
-              >
-                <span class="grow">
-                  {/* A link can arrive with no name at all; the deck screen's
-                      own fallback is used so the two never disagree. */}
-                  <span class="name">{entry.title || t('deck.untitled')}</span>
-                  <br />
-                  <span class="sub">
-                    {formatRelativeTime(entry.lastOpened)} · {tp('deck.cards', entry.cardCount)}
-                  </span>
-                </span>
-                <Icon name="chevron" class="deck-arrow" />
-              </button>
-            ))}
+            {recent.map((entry) => {
+              // A link can arrive with no name at all; the deck screen's own
+              // fallback is used so the two never disagree.
+              const name = entry.title || t('deck.untitled')
+              return (
+                <div key={`${entry.sheetId}:${entry.gid}`} class="row-pair">
+                  <button class="row-link" onClick={() => onOpen(refFromRecent(entry))}>
+                    <span class="grow">
+                      <span class="name">{name}</span>
+                      <br />
+                      <span class="sub">
+                        {formatRelativeTime(entry.lastOpened)} · {tp('deck.cards', entry.cardCount)}
+                      </span>
+                    </span>
+                    <Icon name="chevron" class="deck-arrow" />
+                  </button>
+                  {/*
+                    A sibling of the row rather than inside it: a button cannot
+                    contain a button, and the whole row is one.
+                  */}
+                  <button
+                    class="row-forget"
+                    aria-label={t('recent.forget', { name })}
+                    onClick={() => {
+                      const next = forgetDeck(entry)
+                      onRecentChange(next)
+                      // Nothing left to list, and an empty panel is not an
+                      // answer to "show me my recent decks".
+                      if (next.length === 0) setPanel('none')
+                    }}
+                  >
+                    <Icon name="close" />
+                  </button>
+                </div>
+              )
+            })}
           </div>
         </CardModal>
       ) : null}

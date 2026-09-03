@@ -17,6 +17,7 @@ export default {
   'landing.invalidUrl': '看不懂這個連結。貼上 Google Sheets 的網址，或試試下面的範例。',
   'landing.recent': '最近讀過',
   'landing.recentCount.other': '{n} 副最近開過的牌組',
+  'recent.forget': '從最近使用移除 {name}',
   'landing.examples': '直接試試看',
   'landing.examplesSub': '四副現成的牌組，不用準備任何東西',
   'landing.howtoSub': 'A 欄問題、B 欄答案，三個步驟',
@@ -85,7 +86,6 @@ export default {
   'settings.countAll': '全部',
   'settings.shuffle': '隨機出題',
   'settings.markdown': '以 Markdown 顯示',
-  'settings.clearRecent': '清除最近紀錄',
 
   'direction.front-back': '正面 → 背面',
   'direction.back-front': '背面 → 正面',

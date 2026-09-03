@@ -73,8 +73,25 @@ export function loadRecent(): RecentDeck[] {
   return readJson(NAME, isRecentList) ?? []
 }
 
-export function clearRecent(): void {
-  remove(NAME)
+/**
+ * Drop one deck from the list, and return what is left.
+ *
+ * This replaced a single button that emptied the list, which was the only way
+ * to remove anything and so had to be reached for to remove one thing. That is
+ * the wrong shape for the risk: the list is the only place the app records
+ * which sheets have been opened — deck settings are kept under their own keys
+ * and survive, but nothing can browse those — so emptying it can lose the only
+ * route back to a spreadsheet whose link the reader no longer has. Forgetting
+ * one deck costs one deck, and is undone by opening it again.
+ *
+ * The last entry takes the stored list with it rather than leaving `[]` behind,
+ * so a reader who removes everything leaves nothing written down.
+ */
+export function forgetDeck(entry: RecentDeck): RecentDeck[] {
+  const next = loadRecent().filter((e) => e.sheetId !== entry.sheetId || e.gid !== entry.gid)
+  if (next.length === 0) remove(NAME)
+  else writeJson(NAME, next)
+  return next
 }
 
 /**

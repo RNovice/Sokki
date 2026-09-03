@@ -497,6 +497,52 @@ p {
   min-height: 60px;
 }
 
+/*
+ * A row with a way to remove it, for the recent list.
+ *
+ * The remove button is a sibling of the row rather than a child, because the
+ * row is itself a button and a button cannot contain one. Which means the two
+ * are laid out here rather than inheriting the row's own padding: the row keeps
+ * the whole width it had, and the button is a fixed column beside it.
+ *
+ * It carries no border or ground of its own. Given one it becomes a second card
+ * the same height as the row, and the list reads as pairs of equal things
+ * rather than as decks with a way to remove them. Quiet also matters because
+ * its neighbour is a full-width target people tap without looking: a red cross
+ * sitting there permanently reads as a warning about the row.
+ *
+ * It still takes its colour on hover and on keyboard focus, which is where the
+ * confirmation that this one is destructive belongs.
+ */
+.row-pair {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.row-pair .row-link {
+  /* The row's own `width: 100%` would overflow a flex line with a sibling. */
+  width: auto;
+  flex: 1;
+  min-width: 0;
+}
+
+.row-forget {
+  flex: none;
+  /* At the 44px minimum touch target, and the row's full height. */
+  width: 44px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.row-forget:hover:not(:disabled),
+.row-forget:focus-visible {
+  color: var(--bad);
+  background: var(--bad-soft);
+}
+
 .row-link:hover:not(:disabled) {
   border-color: var(--accent);
   background: var(--surface);

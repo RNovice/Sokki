@@ -11,7 +11,6 @@ import {
 } from './core/deck'
 import { loadPrefs, loadSettings, savePrefs, saveSettings } from './core/prefs'
 import {
-  clearRecent,
   loadRecent,
   rememberDeck,
   renameRecent,
@@ -370,6 +369,7 @@ export function App() {
           {stage.name === 'landing' ? (
             <Landing
               recent={recent}
+              onRecentChange={setRecent}
               onOpen={(ref, markdown) => void openRef(ref, true, markdown)}
             />
           ) : null}
@@ -464,11 +464,6 @@ export function App() {
         <SettingsSheet
           settings={settings}
           onSettings={updateSettings}
-          hasRecent={recent.length > 0}
-          onClearRecent={() => {
-            clearRecent()
-            setRecent([])
-          }}
           onClose={() => setSheet('none')}
         />
       ) : null}

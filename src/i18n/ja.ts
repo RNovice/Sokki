@@ -17,6 +17,7 @@ export default {
   'landing.invalidUrl': 'リンクを認識できません。スプレッドシートの URL を貼り付けるか、下のサンプルをお試しください。',
   'landing.recent': '最近開いたデッキ',
   'landing.recentCount.other': '最近開いた {n} 件',
+  'recent.forget': '{name} を最近使ったデッキから削除',
   'landing.examples': 'サンプルで試す',
   'landing.examplesSub': 'すぐ試せるデッキが 4 つ、準備は不要',
   'landing.howtoSub': 'A 列が問題、B 列が答え。手順は 3 つ',
@@ -85,7 +86,6 @@ export default {
   'settings.countAll': 'すべて',
   'settings.shuffle': 'シャッフル',
   'settings.markdown': 'Markdown で表示',
-  'settings.clearRecent': '最近の履歴を消去',
 
   'direction.front-back': '表 → 裏',
   'direction.back-front': '裏 → 表',
