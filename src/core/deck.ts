@@ -145,13 +145,22 @@ function isSheetId(value: string): boolean {
  * URL here for anyone to choose.
  *
  * Parsed as a URL rather than sliced at the first `?`, which is what this used
- * to do: that treated a `#fragment` as part of the query.
+ * to do: that treated a `#fragment` as part of the query, so an editor URL's
+ * `#gid=` landed inside the value of whichever parameter came last.
+ *
+ * The base is what keeps the URL parser from being *less* forgiving than the
+ * slicing was. Without one, `new URL` rejects everything that is not absolute —
+ * a bare `?s=…`, a root-relative `/?s=…`, a protocol-relative `//host/?s=…` —
+ * all of which used to parse. Its origin is never read; `.invalid` is the
+ * reserved TLD, so nothing here can resolve to a real host by accident.
  */
+const RELATIVE_BASE = 'https://sokki.invalid/'
+
 function linkParams(input: string): URLSearchParams | null {
   try {
-    return new URL(input).searchParams
+    return new URL(input, RELATIVE_BASE).searchParams
   } catch {
-    // Not a URL at all: a bare spreadsheet id, or something unusable.
+    // Nothing a URL can be made of at all.
     return null
   }
 }

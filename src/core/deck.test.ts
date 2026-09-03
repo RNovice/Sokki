@@ -105,6 +105,19 @@ describe('parseSheetInput, on links that carry a deck in their query', () => {
     expect(parseSheetInput(withQuery)).toMatchObject({ sheetId: ID, gid: '99' })
   })
 
+  it('still reads the shapes that are not absolute URLs', () => {
+    // Parsing with `new URL` is stricter than slicing at the first `?`, and
+    // was briefly strict enough to reject these — every one of which the
+    // slicing version accepted. Nobody has a bare query in their clipboard,
+    // but a parser whose whole promise is "paste whatever you have" should not
+    // quietly get narrower.
+    expect(parseSheetInput('?d=toeic')).toEqual({ kind: 'builtin', id: 'toeic' })
+    expect(parseSheetInput(`?s=${ID}&g=8`)).toMatchObject({ sheetId: ID, gid: '8' })
+    expect(parseSheetInput(`/?s=${ID}`)).toMatchObject({ sheetId: ID })
+    expect(parseSheetInput(`//sokki.example/?s=${ID}`)).toMatchObject({ sheetId: ID })
+    expect(markdownFromInput(`?s=${ID}&md=1`)).toBe(true)
+  })
+
   it('does not mistake a fragment for part of the query', () => {
     // Sliced at the first `?`, as this once was, `#gid=847362` lands inside the
     // value of whichever parameter came last.
