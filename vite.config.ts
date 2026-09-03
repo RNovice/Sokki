@@ -89,6 +89,8 @@ function landingShell(): string {
  */
 let envOrigin = ''
 let envBeaconToken = ''
+/** siteOrigin() is called once per consumer; the reader needs telling once. */
+let warnedAboutOrigin = false
 
 /**
  * Cloudflare Web Analytics, installed by hand rather than at the edge.
@@ -104,33 +106,62 @@ let envBeaconToken = ''
  * than being invisibly appended by the proxy.
  *
  * The token is not a secret — it ships in the HTML of every page it measures.
- * It lives in .env.production for the same reason the origin does, and being a
- * variable means a fork of this repository does not report into someone else's
- * dashboard.
+ * It is a variable for the same reason the origin is: both describe a
+ * deployment rather than this code, and a fork that inherited them would claim
+ * this site's canonical URL and report into its dashboard. Both are set in
+ * Cloudflare under Settings -> Build -> Build Variables and Secrets.
  */
 function beaconToken() {
   return envBeaconToken.trim()
 }
 
+/**
+ * Whether this build is the one being served to the public.
+ *
+ * Cloudflare Workers Builds sets WORKERS_CI; CI covers anything else that runs
+ * the build for a deploy. Missing the origin there is not the same mistake as
+ * missing it on a laptop, so it is not the same outcome — see siteOrigin.
+ */
+function isDeployBuild() {
+  return !!(process.env.WORKERS_CI ?? process.env.CI)
+}
+
 function siteOrigin() {
   const origin = envOrigin.replace(/\/$/, '')
-  if (!origin) {
-    console.warn(
-      '\n  VITE_SITE_ORIGIN is not set.' +
-        '\n  og:url stays relative, and the canonical link and sitemap.xml are' +
-        '\n  left out entirely — both have to be absolute to mean anything.\n',
+  if (origin) return origin
+
+  const consequence =
+    '  og:url stays relative, and the canonical link and sitemap.xml are\n' +
+    '  left out entirely — both have to be absolute to mean anything.'
+  /*
+   * Loud on a deploy, quiet on a laptop.
+   *
+   * The origin used to be committed, so every build had it and the warning was
+   * for forks. It is set on Cloudflare now, which means one unticked box ships
+   * a live site with no canonical and no sitemap and says so only in a build
+   * log nobody reads. A local build genuinely does not need it — there is
+   * nowhere for those URLs to point — so only the deploy fails.
+   */
+  if (isDeployBuild()) {
+    throw new Error(
+      `VITE_SITE_ORIGIN is not set, and this is a deploy build.\n${consequence}\n` +
+        '  Set it in Cloudflare: Settings -> Build -> Build Variables and Secrets.',
     )
   }
-  return origin
+  if (!warnedAboutOrigin) {
+    warnedAboutOrigin = true
+    console.warn(`\n  VITE_SITE_ORIGIN is not set.\n${consequence}\n`)
+  }
+  return ''
 }
 
 export default defineConfig(({ mode }) => {
   /*
-   * Read through loadEnv rather than process.env. A `.env` file is picked up by
-   * Vite for the *app*, not for this config, so a committed VITE_SITE_ORIGIN
-   * would be invisible here and every build would warn and skip the canonical.
-   * The origin is not a secret, so it lives in .env.production and needs no
-   * dashboard setting to be correct.
+   * Read through loadEnv rather than process.env directly. A `.env` file is
+   * picked up by Vite for the *app*, not for this config, so a value in one
+   * would be invisible here and every local build would warn and skip the
+   * canonical. loadEnv reads those files and lets real environment variables
+   * win, which is what makes the Cloudflare build settings work.
    */
   const env = loadEnv(mode, process.cwd(), '')
   envOrigin = env.VITE_SITE_ORIGIN ?? ''

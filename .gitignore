@@ -5,16 +5,16 @@ node_modules
 dist
 dev-dist
 
-# Local environment. Secrets are not committed; two files are.
+# Local environment. Only the example is committed.
 #
-# .env.example documents what exists. .env.production carries the site origin,
-# which is public by definition — it is the address people type — and has to be
-# in the repo, because a build that cannot see it drops the canonical link and
-# sitemap.xml without failing.
+# Nothing the build needs is a secret, but nothing it needs is in the repo
+# either: the site origin and the analytics token are both properties of a
+# deployment rather than of this code, and a fork that inherited them would
+# claim our canonical URL and report into our dashboard. They are set on
+# Cloudflare, in Settings -> Build -> Build Variables and Secrets.
 .env
 .env.*
 !.env.example
-!.env.production
 
 # Tooling caches and scratch
 .vite

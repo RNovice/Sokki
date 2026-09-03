@@ -79,10 +79,17 @@ have should say so rather than answer with the app.
 script hash is computed at build time by `scripts/seal-csp.mjs` — editing the
 inline theme script cannot leave the policy stale.
 
-`VITE_SITE_ORIGIN` lives in `.env.production`, committed, because an origin is
-public by definition — it is the address people type. Without it the build warns
-and then silently drops the canonical link and `sitemap.xml`, since both have to
-be absolute to mean anything, and `og:url` stays relative.
+`VITE_SITE_ORIGIN` is the absolute origin this site is served from. It is not a
+secret — it is the address people type — but it describes a deployment rather
+than this code, so it is set on Cloudflare beside the beacon token below rather
+than committed: a fork that inherited it would point its canonical at this site.
+
+Without it `og:url` stays relative and the canonical link and `sitemap.xml` are
+not emitted at all, since both have to be absolute to mean anything. A local
+build says so and carries on — there is nowhere for those URLs to point anyway.
+A build with `CI` or `WORKERS_CI` set fails instead, because there one unticked
+box would ship a live site with no canonical and mention it only in a log
+nobody reads.
 
 `robots.txt` and `sitemap.xml` are emitted by the build rather than kept in
 `public/`, because both need that origin and files in `public/` are copied
