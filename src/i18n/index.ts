@@ -59,6 +59,20 @@ export async function loadLocale(locale: Locale): Promise<void> {
 }
 
 /**
+ * Which language `t()` is currently answering in.
+ *
+ * Exported for one purpose: a `useMemo` whose subtree calls `t()` depends on
+ * this, and on nothing the linter can see. `dict` is module state, so a held
+ * subtree keeps the words it was built with — measured, switching language left
+ * the landing page's three rows, the quiz's progress line and both answer
+ * buttons in the previous one until something else happened to rebuild them.
+ * Naming the locale in the dependency array is what makes those memos honest.
+ */
+export function currentLocale(): Locale {
+  return active
+}
+
+/**
  * Missing keys return the key itself. That makes a gap obvious in the
  * interface during development without throwing at a user.
  */

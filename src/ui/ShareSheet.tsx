@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'preact/hooks'
 import { sheetEditUrl, shareUrl } from '../core/deck'
 import type { DeckRef } from '../core/types'
-import { t } from '../i18n'
+import { currentLocale, t } from '../i18n'
 import { useEscapeToClose } from './CardModal'
 import { Icon } from './Icon'
 
@@ -32,6 +32,19 @@ export function ShareSheet({ deckRef, name, markdown, onClose }: Props) {
   // than starting blank and quietly dropping it out of the link.
   const [title, setTitle] = useState(deckRef.kind === 'sheet' ? name : '')
   const [copied, setCopied] = useState(false)
+
+  /*
+   * A dependency of every held subtree below that calls t(), because t() reads
+   * a module-level dictionary swapped in asynchronously — so the words a
+   * subtree was built with are not a function of anything in its own scope.
+   * Without this, switching language left it behind until something unrelated
+   * happened to rebuild it.
+   *
+   * The linter reads it as unnecessary, correctly by its own rules: nothing in
+   * the callback mentions `locale`. It is suppressed where it appears rather
+   * than argued with, the same way App.tsx suppresses it for `localeTick`.
+   */
+  const locale = currentLocale()
 
   const named: DeckRef =
     deckRef.kind === 'sheet' ? { ...deckRef, title: title.trim() || undefined } : deckRef
@@ -69,7 +82,8 @@ export function ShareSheet({ deckRef, name, markdown, onClose }: Props) {
         </button>
       </div>
     ),
-    [onClose],
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [onClose, locale],
   )
 
   const actions = useMemo(
@@ -86,7 +100,8 @@ export function ShareSheet({ deckRef, name, markdown, onClose }: Props) {
         ) : null}
       </div>
     ),
-    [copied, editUrl, copy],
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [copied, editUrl, copy, locale],
   )
 
   return (

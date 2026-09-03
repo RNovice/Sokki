@@ -2,7 +2,7 @@ import { useMemo, useState } from 'preact/hooks'
 import { BUILTIN_DECKS, markdownFromInput, parseSheetInput } from '../core/deck'
 import { refFromRecent, type RecentDeck } from '../core/recent'
 import type { DeckRef } from '../core/types'
-import { formatRelativeTime, t, tp } from '../i18n'
+import { currentLocale, formatRelativeTime, t, tp } from '../i18n'
 import { CardModal } from './CardModal'
 import { Icon } from './Icon'
 
@@ -28,6 +28,19 @@ export function Landing({ onOpen, recent }: Props) {
   const [input, setInput] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
   const [panel, setPanel] = useState<Panel>('none')
+
+  /*
+   * A dependency of every held subtree below that calls t(), because t() reads
+   * a module-level dictionary swapped in asynchronously — so the words a
+   * subtree was built with are not a function of anything in its own scope.
+   * Without this, switching language left it behind until something unrelated
+   * happened to rebuild it.
+   *
+   * The linter reads it as unnecessary, correctly by its own rules: nothing in
+   * the callback mentions `locale`. It is suppressed where it appears rather
+   * than argued with, the same way App.tsx suppresses it for `localeTick`.
+   */
+  const locale = currentLocale()
 
   function submit() {
     const ref = parseSheetInput(input)
@@ -87,7 +100,8 @@ export function Landing({ onOpen, recent }: Props) {
         </button>
       </div>
     ),
-    [recent],
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [recent, locale],
   )
 
   return (

@@ -11,7 +11,7 @@ import {
 } from '../core/gesture'
 import { currentIndex, facesFor, questionSide } from '../core/session'
 import type { Card, Session } from '../core/types'
-import { t, tp } from '../i18n'
+import { currentLocale, t, tp } from '../i18n'
 import { measure } from '../monitoring'
 import { CardText } from './CardText'
 import { FlipCard } from './FlipCard'
@@ -287,6 +287,19 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
   const strength = swipeStrength(dx, cardWidth.current)
   const armed = armedSide(dx, cardWidth.current)
   const tilt = tiltFor(dx)
+
+  /*
+   * A dependency of every held subtree below that calls t(), because t() reads
+   * a module-level dictionary swapped in asynchronously — so the words a
+   * subtree was built with are not a function of anything in its own scope.
+   * Without this, switching language left it behind until something unrelated
+   * happened to rebuild it.
+   *
+   * The linter reads it as unnecessary, correctly by its own rules: nothing in
+   * the callback mentions `locale`. It is suppressed where it appears rather
+   * than argued with, the same way App.tsx suppresses it for `localeTick`.
+   */
+  const locale = currentLocale()
   /*
    * The three subtrees below are held across renders on purpose.
    *
@@ -325,7 +338,8 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
         </div>
       </div>
     ),
-    [session.pos, total, remaining],
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [session.pos, total, remaining, locale],
   )
 
   // `armed` is the only part of this that a drag changes, and it changes at
@@ -343,7 +357,8 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
         </button>
       </div>
     ),
-    [armed, commit],
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [armed, commit, locale],
   )
 
   if (!card || index === null) return null
