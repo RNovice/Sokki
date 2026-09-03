@@ -39,7 +39,7 @@ describe('parseSheetInput', () => {
 
   it('takes a link this app produced, round-tripping through its own format', () => {
     const ours = `${SITE}/?s=${ID}&g=12&t=${encodeURIComponent('期中考範圍')}`
-    expect(parseSheetInput(ours, SITE)).toMatchObject({
+    expect(parseSheetInput(ours)).toMatchObject({
       kind: 'sheet',
       sheetId: ID,
       gid: '12',
@@ -48,7 +48,7 @@ describe('parseSheetInput', () => {
   })
 
   it('takes a link to a builtin deck', () => {
-    expect(parseSheetInput(`${SITE}/?d=toeic`, SITE)).toEqual({
+    expect(parseSheetInput(`${SITE}/?d=toeic`)).toEqual({
       kind: 'builtin',
       id: 'toeic',
     })
@@ -73,42 +73,47 @@ describe('parseSheetInput', () => {
 /**
  * The paste box reads our own share links, and nothing says so — someone who
  * has one got it from a person, and pasting it where links go is what they will
- * try. What has to be true for that to be safe is that "one of ours" is checked
- * rather than assumed: `s` and `d` are names any site might use.
+ * try.
+ *
+ * It reads them whoever served them, which was briefly not the case. An origin
+ * check stood here for a day. It refused a real share link pasted into a local
+ * build, or any preview or renamed host, and prevented nothing in exchange:
+ * anyone who wants you to open their deck can send you a genuine link, so the
+ * check only turned away the disguised version of something already allowed.
+ *
+ * These pin what actually keeps a stranger's query harmless, which is
+ * validation rather than provenance.
  */
-describe('parseSheetInput, on links claiming to be ours', () => {
-  it('reads the query only when the link came from this same origin', () => {
-    const elsewhere = `https://not-sokki.example/?s=${ID}&g=12`
-    expect(parseSheetInput(elsewhere, SITE)).toBeNull()
-    expect(parseSheetInput(`${SITE}/?s=${ID}&g=12`, SITE)).toMatchObject({ sheetId: ID, gid: '12' })
-  })
-
-  it('is not fooled by an origin that merely starts or ends the same way', () => {
-    for (const near of ['https://sokki.example.evil.test', 'https://evil-sokki.example']) {
-      expect(parseSheetInput(`${near}/?d=toeic`, SITE)).toBeNull()
+describe('parseSheetInput, on links that carry a deck in their query', () => {
+  it('reads one served from anywhere, because ours can be', () => {
+    for (const host of [SITE, 'https://sokki.pages.dev', 'http://localhost:5173']) {
+      expect(parseSheetInput(`${host}/?s=${ID}&g=12`)).toMatchObject({ sheetId: ID, gid: '12' })
     }
   })
 
-  it('reads a Google Sheets URL as a sheet even where a query could be misread', () => {
-    // Precedence, settled by the origin check: docs.google.com is never ours.
-    const withQuery = `https://docs.google.com/spreadsheets/d/${ID}/edit?s=other&gid=99`
-    expect(parseSheetInput(withQuery, SITE)).toMatchObject({ sheetId: ID, gid: '99' })
+  it('takes nothing on trust: every part of the query is checked', () => {
+    // The sheet id against a character class, the tab against digits, the deck
+    // id against the four that exist. This is what makes provenance moot — the
+    // id that survives is only ever interpolated into a fixed Google template.
+    expect(parseSheetInput('https://any.example/?s=short')).toBeNull()
+    expect(parseSheetInput('https://any.example/?d=no-such-deck')).toBeNull()
+    expect(parseSheetInput(`https://any.example/?s=${ID}&g=../evil`)).toMatchObject({ gid: '0' })
   })
 
-  it('takes nobody else\'s word for how to read a deck', () => {
-    // &md=1 changes how every card is rendered. It is ours to set, not a
-    // stranger's — and the deck it arrived with is not loading anyway.
-    expect(markdownFromInput(`https://not-sokki.example/?s=${ID}&md=1`, SITE)).toBeUndefined()
-    expect(markdownFromInput(`${SITE}/?s=${ID}&md=1`, SITE)).toBe(true)
+  it('reads a Google Sheets URL as a sheet, query or no query', () => {
+    const withQuery = `https://docs.google.com/spreadsheets/d/${ID}/edit?usp=sharing&gid=99`
+    expect(parseSheetInput(withQuery)).toMatchObject({ sheetId: ID, gid: '99' })
   })
 
-  it('goes quiet where there is no document to take an origin from', () => {
-    // The default in a test, and in anything else without a location. Nothing
-    // is ours, so nothing claiming to be gets read.
-    expect(parseSheetInput(`${SITE}/?d=toeic`)).toBeNull()
-    expect(markdownFromInput(`${SITE}/?s=${ID}&md=1`)).toBeUndefined()
+  it('does not mistake a fragment for part of the query', () => {
+    // Sliced at the first `?`, as this once was, `#gid=847362` lands inside the
+    // value of whichever parameter came last.
+    expect(parseSheetInput(`https://any.example/?s=${ID}#gid=847362`)).toMatchObject({
+      sheetId: ID,
+    })
   })
 })
+
 
 describe('refFromParams', () => {
   it('ignores a builtin id that does not exist', () => {
@@ -208,10 +213,10 @@ describe('the markdown parameter', () => {
   })
 
   it('survives a link pasted into the box instead of clicked', () => {
-    expect(markdownFromInput(`${SITE}/?s=${ID}&md=1`, SITE)).toBe(true)
-    expect(markdownFromInput(`${SITE}/?s=${ID}`, SITE)).toBeUndefined()
+    expect(markdownFromInput(`${SITE}/?s=${ID}&md=1`)).toBe(true)
+    expect(markdownFromInput(`${SITE}/?s=${ID}`)).toBeUndefined()
     // A bare spreadsheet URL says nothing about it either way.
     const sheet = `https://docs.google.com/spreadsheets/d/${ID}/edit`
-    expect(markdownFromInput(sheet, SITE)).toBeUndefined()
+    expect(markdownFromInput(sheet)).toBeUndefined()
   })
 })

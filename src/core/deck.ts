@@ -120,35 +120,36 @@ function isSheetId(value: string): boolean {
   return SHEET_ID.test(value)
 }
 
-/** Where this build is served from, or '' when there is no document. */
-function ownOrigin(): string {
-  return typeof location === 'undefined' ? '' : location.origin
-}
-
 /**
- * The query of a link this app produced, or null for anything else.
+ * The query of a pasted link, whoever served it.
  *
  * There is no hint in the interface that the paste box takes our own share
  * links, and there does not need to be: someone who has one has it because
  * somebody sent it to them, and pasting a link where you paste links is the
- * first thing they will try. It costs nothing and removes a way to be stuck.
+ * first thing they will try.
  *
- * Same origin only, and that is the part worth stating. `s` and `d` are
- * ordinary parameter names — a page elsewhere can carry them meaning something
- * else entirely, and this used to read the query of any URL that had them, so a
- * link to another site could quietly open a deck instead of being reported as
- * the unusable link it is. Matching the origin makes "a link this app produced"
- * something checked rather than assumed, and it settles precedence for free: a
- * Google Sheets URL is never ours, so it can only be read as a sheet.
+ * This checked the origin for a while, on the reasoning that `s` and `d` are
+ * ordinary parameter names and a link from elsewhere should not be able to open
+ * a deck. The reasoning does not survive being stated plainly: a link from
+ * elsewhere opening a deck is not something the check prevents, because anyone
+ * who wants you to open their deck can send you a real share link. It only
+ * refused the disguised version of something already allowed, while refusing
+ * real share links too — a production link pasted into a local build, or into
+ * any preview or renamed hostname, is one of ours and was being rejected.
  *
- * An empty origin — tests, or anything with no document — matches nothing,
- * which is the safe direction to fail in.
+ * What makes reading a stranger's query safe is not where it came from. It is
+ * that refFromParams validates every part of it: the sheet id against a
+ * character class, the tab against digits, the deck id against the four that
+ * exist. The id it yields is then only ever interpolated into a fixed
+ * docs.google.com template, and connect-src allows nothing else, so there is no
+ * URL here for anyone to choose.
+ *
+ * Parsed as a URL rather than sliced at the first `?`, which is what this used
+ * to do: that treated a `#fragment` as part of the query.
  */
-function ownLinkParams(input: string, origin: string): URLSearchParams | null {
-  if (!origin) return null
+function linkParams(input: string): URLSearchParams | null {
   try {
-    const url = new URL(input)
-    return url.origin === origin ? url.searchParams : null
+    return new URL(input).searchParams
   } catch {
     // Not a URL at all: a bare spreadsheet id, or something unusable.
     return null
@@ -162,18 +163,18 @@ function ownLinkParams(input: string, origin: string): URLSearchParams | null {
  *   - the Share dialog's link, with or without `?usp=sharing`
  *   - an editor URL carrying the tab in `#gid=`
  *   - a published-to-web URL (`/d/e/2PACX-.../pubhtml`)
- *   - a share link this app produced, if it came from this same origin
+ *   - a share link this app produced
  *   - a bare spreadsheet id
  *
  * Returns null instead of throwing so the input field can hint while the user
  * is still typing.
  */
-export function parseSheetInput(raw: string, origin = ownOrigin()): DeckRef | null {
+export function parseSheetInput(raw: string): DeckRef | null {
   const input = raw.trim()
   if (!input) return null
 
   // A link this app produced. Read it back through the same code that made it.
-  const ours = ownLinkParams(input, origin)
+  const ours = linkParams(input)
   if (ours) {
     const fromOurs = refFromParams(ours)
     if (fromOurs) return fromOurs
@@ -196,9 +197,9 @@ export function parseSheetInput(raw: string, origin = ownOrigin()): DeckRef | nu
  * markdownFromParams is separate: it describes how to read the deck, not which
  * deck it is.
  */
-export function markdownFromInput(raw: string, origin = ownOrigin()): boolean | undefined {
-  const ours = ownLinkParams(raw.trim(), origin)
-  return ours ? markdownFromParams(ours) : undefined
+export function markdownFromInput(raw: string): boolean | undefined {
+  const params = linkParams(raw.trim())
+  return params ? markdownFromParams(params) : undefined
 }
 
 /* ------------------------------------------------------------------ fetching */
