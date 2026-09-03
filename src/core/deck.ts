@@ -120,6 +120,41 @@ function isSheetId(value: string): boolean {
   return SHEET_ID.test(value)
 }
 
+/** Where this build is served from, or '' when there is no document. */
+function ownOrigin(): string {
+  return typeof location === 'undefined' ? '' : location.origin
+}
+
+/**
+ * The query of a link this app produced, or null for anything else.
+ *
+ * There is no hint in the interface that the paste box takes our own share
+ * links, and there does not need to be: someone who has one has it because
+ * somebody sent it to them, and pasting a link where you paste links is the
+ * first thing they will try. It costs nothing and removes a way to be stuck.
+ *
+ * Same origin only, and that is the part worth stating. `s` and `d` are
+ * ordinary parameter names — a page elsewhere can carry them meaning something
+ * else entirely, and this used to read the query of any URL that had them, so a
+ * link to another site could quietly open a deck instead of being reported as
+ * the unusable link it is. Matching the origin makes "a link this app produced"
+ * something checked rather than assumed, and it settles precedence for free: a
+ * Google Sheets URL is never ours, so it can only be read as a sheet.
+ *
+ * An empty origin — tests, or anything with no document — matches nothing,
+ * which is the safe direction to fail in.
+ */
+function ownLinkParams(input: string, origin: string): URLSearchParams | null {
+  if (!origin) return null
+  try {
+    const url = new URL(input)
+    return url.origin === origin ? url.searchParams : null
+  } catch {
+    // Not a URL at all: a bare spreadsheet id, or something unusable.
+    return null
+  }
+}
+
 /**
  * Accepts anything a user could plausibly paste, because the alternative is
  * teaching them a URL format:
@@ -127,23 +162,21 @@ function isSheetId(value: string): boolean {
  *   - the Share dialog's link, with or without `?usp=sharing`
  *   - an editor URL carrying the tab in `#gid=`
  *   - a published-to-web URL (`/d/e/2PACX-.../pubhtml`)
- *   - a link this app produced earlier
+ *   - a share link this app produced, if it came from this same origin
  *   - a bare spreadsheet id
  *
  * Returns null instead of throwing so the input field can hint while the user
  * is still typing.
  */
-export function parseSheetInput(raw: string): DeckRef | null {
+export function parseSheetInput(raw: string, origin = ownOrigin()): DeckRef | null {
   const input = raw.trim()
   if (!input) return null
 
   // A link this app produced. Read it back through the same code that made it.
-  if (input.includes('?') || input.includes('&')) {
-    const queryStart = input.indexOf('?')
-    if (queryStart !== -1) {
-      const fromOurs = refFromParams(new URLSearchParams(input.slice(queryStart + 1)))
-      if (fromOurs) return fromOurs
-    }
+  const ours = ownLinkParams(input, origin)
+  if (ours) {
+    const fromOurs = refFromParams(ours)
+    if (fromOurs) return fromOurs
   }
 
   const byUrl = /\/spreadsheets\/d\/(?:e\/)?([a-zA-Z0-9\-_]{20,})/.exec(input)
@@ -163,10 +196,9 @@ export function parseSheetInput(raw: string): DeckRef | null {
  * markdownFromParams is separate: it describes how to read the deck, not which
  * deck it is.
  */
-export function markdownFromInput(raw: string): boolean | undefined {
-  const query = raw.indexOf('?')
-  if (query === -1) return undefined
-  return markdownFromParams(new URLSearchParams(raw.slice(query + 1)))
+export function markdownFromInput(raw: string, origin = ownOrigin()): boolean | undefined {
+  const ours = ownLinkParams(raw.trim(), origin)
+  return ours ? markdownFromParams(ours) : undefined
 }
 
 /* ------------------------------------------------------------------ fetching */
