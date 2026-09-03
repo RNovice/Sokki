@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { THEME_NAMES } from './apply'
+import { THEME_COLORS, THEME_NAMES } from './apply'
 
 /**
  * Ten palettes cannot be checked by eye — something will be missed, and what
@@ -89,6 +89,30 @@ describe('theme tokens', () => {
 
   it('the dark media override is guarded so an explicit theme still wins', () => {
     expect(CSS).toContain(':root:not([data-theme])')
+  })
+})
+
+/**
+ * --bg is written down three times: here in themes.css, in apply.ts, and in the
+ * inline script in index.html. It has to be, because two of the three consumers
+ * need the colour before or outside the cascade — the theme-color meta tag and
+ * the inline background that paints the canvas before the stylesheet arrives.
+ * Copies drift silently, and this one drifts into a page whose ground is one
+ * theme and whose text is another.
+ */
+describe('the ground colour, in all the places it is written', () => {
+  it.each(THEME_NAMES)('%s: apply.ts agrees with themes.css', (theme) => {
+    expect(THEME_COLORS[theme]).toBe(paletteFrom(SELECTORS[theme]!)['--bg'])
+  })
+
+  it("index.html's pre-paint script agrees with both", () => {
+    // Parsed rather than eyeballed: this script runs before anything else and
+    // is the only thing standing between a dark theme and a white flash.
+    const script = readFileSync(fileURLToPath(new URL('../../index.html', import.meta.url)), 'utf8')
+    for (const theme of THEME_NAMES) {
+      const found = new RegExp(`${theme}\\s*:\\s*'([^']+)'`).exec(script)?.[1]
+      expect(found, theme).toBe(THEME_COLORS[theme])
+    }
   })
 })
 
