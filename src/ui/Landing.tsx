@@ -180,7 +180,7 @@ export function Landing({ onOpen, recent, onRecentChange }: Props) {
                       if (next.length === 0) setPanel('none')
                     }}
                   >
-                    <Icon name="close" />
+                    <Icon name="trash" />
                   </button>
                 </div>
               )

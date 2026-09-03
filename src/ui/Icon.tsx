@@ -34,6 +34,7 @@ export type IconName =
   | 'flip'
   | 'offline'
   | 'pencil'
+  | 'trash'
 
 interface Props extends Omit<JSX.SVGAttributes<SVGSVGElement>, 'size'> {
   name: IconName
@@ -83,6 +84,18 @@ const PATHS: Record<IconName, JSX.Element> = {
     <>
       <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" />
       <path d="M14 6l4 4" />
+    </>
+  ),
+  // Lucide's trash-2, which is drawn to the same rules as the rest of this set
+  // — 24 grid, 2px stroke, no fill — so it needed no adjusting to sit beside
+  // them.
+  trash: (
+    <>
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
     </>
   ),
 }
