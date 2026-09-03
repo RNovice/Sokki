@@ -4,6 +4,7 @@ import {
   classify,
   exitDx,
   shouldCommit,
+  shouldRescue,
   smoothVelocity,
   swipeStrength,
   TAP_MAX_MS,
@@ -27,8 +28,12 @@ function prefersReducedMotion(): boolean {
 /**
  * A pointer gesture is not classified until it has moved far enough to say what
  * it is. Until then it is `pending` and does nothing visible; after that it is
- * either a horizontal swipe or a vertical scroll, and it cannot change its mind
- * halfway through.
+ * either a horizontal swipe or a vertical scroll.
+ *
+ * A swipe is final — once the card is following the finger, nothing takes it
+ * back. A scroll is not: it was decided from 12px of movement and can turn out
+ * to have been wrong, so it keeps where it started and what the face's scroll
+ * position was, which is everything shouldRescue needs to reverse it.
  */
 type Gesture =
   | { phase: 'none' }
@@ -41,7 +46,7 @@ type Gesture =
       lastAt: number
       velocity: number
     }
-  | { phase: 'vertical'; id: number }
+  | { phase: 'vertical'; id: number; x: number; y: number; scrollTop: number }
 
 interface Props {
   session: Session
@@ -173,15 +178,35 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
 
   const gesture = useRef<Gesture>({ phase: 'none' })
 
-  /**
-   * Whether the side currently facing up has more content than fits. Only then
-   * is there a scroll worth protecting from a diagonal drag.
-   */
-  const faceCanScroll = useCallback((): boolean => {
+  /** The side currently facing up — the one a finger is over. */
+  const faceEl = useCallback((): HTMLElement | null => {
     const faces = cardEl.current?.querySelectorAll<HTMLElement>('.card-face')
-    const face = faces?.[showingBack ? 1 : 0]
-    return !!face && face.scrollHeight > face.clientHeight + 1
+    return faces?.[showingBack ? 1 : 0] ?? null
   }, [showingBack])
+
+  /**
+   * Whether the face can scroll further in the direction this drag is heading.
+   *
+   * The question used to be "does this face scroll at all", which is not the
+   * same one and is true far more often. A long answer read down to its end
+   * cannot scroll further down, and one still at its top cannot scroll up; in
+   * both cases the strict direction ratio was defending a scroll that could not
+   * happen, and the cost of that was the reader's swipe.
+   *
+   * Dragging the finger up moves the content up, which needs room below it.
+   */
+  const scrollToProtect = useCallback(
+    (moveY: number): boolean => {
+      const face = faceEl()
+      if (!face) return false
+      const room = face.scrollHeight - face.clientHeight
+      if (room <= 1) return false
+      if (moveY < 0) return face.scrollTop < room - 1
+      if (moveY > 0) return face.scrollTop > 1
+      return true
+    },
+    [faceEl],
+  )
 
   const onPointerDown = (event: PointerEvent) => {
     if (leaving.current) return
@@ -194,36 +219,79 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
     }
   }
 
+  /**
+   * Hand the card over to the finger. Anchored on where the finger is now
+   * rather than where it started, so the card does not jump by the distance the
+   * gesture spent being classified — which for a rescued one is 36px.
+   */
+  const beginDrag = (event: PointerEvent, id: number) => {
+    /*
+     * Capture keeps the moves coming if the finger leaves the card, which is
+     * a convenience rather than a requirement — the drag reads clientX and
+     * would work without it. It throws if the pointer is no longer active, and
+     * an exception here used to abandon the whole handler with the gesture left
+     * in whatever phase it was in: from the rescue path that means retrying,
+     * and throwing, on every remaining move of the touch.
+     */
+    try {
+      cardEl.current?.setPointerCapture(id)
+    } catch {
+      // Gone already. The drag still works; it just ends at the card's edge.
+    }
+    // One layout read for the whole drag, instead of one per frame.
+    cardWidth.current = cardEl.current?.offsetWidth ?? 300
+    gesture.current = {
+      phase: 'horizontal',
+      id,
+      originX: event.clientX,
+      lastX: event.clientX,
+      lastAt: Date.now(),
+      velocity: 0,
+    }
+    setDragging(true)
+  }
+
   const onPointerMove = (event: PointerEvent) => {
     const g = gesture.current
-    if (g.phase === 'vertical' || g.phase === 'none') return
+    if (g.phase === 'none') return
     if (g.id !== event.pointerId) return
 
+    /*
+     * Still being delivered moves after being read as a scroll. With
+     * `touch-action: pan-y` the browser cancels the pointer the moment it takes
+     * the gesture over, so getting here at all is evidence nothing is
+     * scrolling — but the face's own position is checked as well, because that
+     * is the thing actually at stake.
+     */
+    if (g.phase === 'vertical') {
+      if (!swipeEnabled) return
+      const scrolled = (faceEl()?.scrollTop ?? g.scrollTop) !== g.scrollTop
+      if (!shouldRescue(event.clientX - g.x, event.clientY - g.y, scrolled)) return
+      beginDrag(event, g.id)
+      return
+    }
+
     if (g.phase === 'pending') {
-      const intent = classify(event.clientX - g.x, event.clientY - g.y, {
+      const moveX = event.clientX - g.x
+      const moveY = event.clientY - g.y
+      const intent = classify(moveX, moveY, {
         swipeEnabled,
-        faceScrolls: faceCanScroll(),
+        scrollToProtect: scrollToProtect(moveY),
       })
       if (intent === 'undecided') return
       if (intent === 'vertical') {
-        // Committed to being a scroll. Releasing will not rate the card.
-        gesture.current = { phase: 'vertical', id: g.id }
+        // Read as a scroll. Releasing will not rate the card — but the reading
+        // was made from 12px of movement, so it is not the last word either.
+        gesture.current = {
+          phase: 'vertical',
+          id: g.id,
+          x: g.x,
+          y: g.y,
+          scrollTop: faceEl()?.scrollTop ?? 0,
+        }
         return
       }
-      // Anchor on where the finger is now, not where it started, so the card
-      // does not jump by the activation distance when it starts following.
-      cardEl.current?.setPointerCapture(g.id)
-      // One layout read for the whole drag, instead of one per frame.
-      cardWidth.current = cardEl.current?.offsetWidth ?? 300
-      gesture.current = {
-        phase: 'horizontal',
-        id: g.id,
-        originX: event.clientX,
-        lastX: event.clientX,
-        lastAt: Date.now(),
-        velocity: 0,
-      }
-      setDragging(true)
+      beginDrag(event, g.id)
       return
     }
 

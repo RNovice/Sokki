@@ -33,7 +33,9 @@ export const ACTIVATION_PX = 12
  * The strict one exists to protect scrolling a long answer. But most cards are
  * a word or a phrase with nothing to scroll, and on those the strictness buys
  * nothing while rejecting the down-and-right arc that a thumb naturally makes.
- * So the gate is only strict when there is actually a scroll to defend.
+ * So the gate is only strict when there is actually a scroll to defend — see
+ * the `scrollToProtect` option, which is a narrower question than it first
+ * looks.
  */
 const DIRECTION_RATIO_SCROLLABLE = 1.5
 const DIRECTION_RATIO_FIXED = 1.0
@@ -90,12 +92,49 @@ export type Intent = 'undecided' | 'horizontal' | 'vertical'
 export function classify(
   moveX: number,
   moveY: number,
-  options: { swipeEnabled: boolean; faceScrolls: boolean },
+  /**
+   * `scrollToProtect` asks whether this face can scroll *further the way this
+   * drag is heading* — not merely whether it is a scroll container. A card
+   * sitting at the top of its own text cannot scroll down however long it is,
+   * so a downward arc there has nothing to protect and the strict ratio only
+   * costs the reader a swipe.
+   */
+  options: { swipeEnabled: boolean; scrollToProtect: boolean },
 ): Intent {
   if (Math.hypot(moveX, moveY) < ACTIVATION_PX) return 'undecided'
   if (!options.swipeEnabled) return 'vertical'
-  const ratio = options.faceScrolls ? DIRECTION_RATIO_SCROLLABLE : DIRECTION_RATIO_FIXED
+  const ratio = options.scrollToProtect ? DIRECTION_RATIO_SCROLLABLE : DIRECTION_RATIO_FIXED
   return Math.abs(moveX) > Math.abs(moveY) * ratio ? 'horizontal' : 'vertical'
+}
+
+/**
+ * How far sideways a gesture already read as a scroll has to go before it is
+ * taken back as a swipe.
+ *
+ * Deliberately well past ACTIVATION_PX: this only fires after the first reading
+ * said "scroll", so it has to be a movement nobody would call ambiguous.
+ */
+export const RESCUE_PX = 36
+
+/**
+ * Whether a gesture classified as a scroll should be taken back as a swipe.
+ *
+ * The classification happens at 12px of movement, on a face that may scroll,
+ * and at 12px a thumb's arc is mostly noise. Getting it wrong used to be final
+ * — the card would not move for the rest of that touch, however far sideways
+ * the reader then dragged, so the swipe simply failed and they had to lift and
+ * try again. On a deck of long cards that is most swipes.
+ *
+ * `scrolled` is what keeps this from stealing a real scroll: if the face has
+ * actually moved since the reading, the reader is scrolling and the card stays
+ * put. In practice the browser answers this first — `touch-action: pan-y` means
+ * it takes the gesture over itself and fires pointercancel, so a pointer still
+ * delivering moves is one nothing is scrolling with. The check is here for the
+ * devices where that is less crisp than the specification promises.
+ */
+export function shouldRescue(moveX: number, moveY: number, scrolled: boolean): boolean {
+  if (scrolled) return false
+  return Math.abs(moveX) >= RESCUE_PX && Math.abs(moveX) > Math.abs(moveY) * DIRECTION_RATIO_FIXED
 }
 
 /**

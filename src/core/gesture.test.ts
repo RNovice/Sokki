@@ -5,7 +5,9 @@ import {
   classify,
   commitDistance,
   exitDx,
+  RESCUE_PX,
   shouldCommit,
+  shouldRescue,
   smoothVelocity,
   swipeStrength,
   tiltFor,
@@ -34,7 +36,7 @@ describe('how far is far enough', () => {
 })
 
 describe('what a movement turns out to be', () => {
-  const opts = { swipeEnabled: true, faceScrolls: false }
+  const opts = { swipeEnabled: true, scrollToProtect: false }
 
   it('decides nothing until it has moved far enough to mean something', () => {
     expect(classify(5, 5, opts)).toBe('undecided')
@@ -45,22 +47,59 @@ describe('what a movement turns out to be', () => {
   it('reads a thumb arc as a swipe when there is no scroll to protect', () => {
     // Down-and-right is how a thumb actually moves; on a card with nothing to
     // scroll, rejecting it buys nothing.
-    expect(classify(30, 25, { swipeEnabled: true, faceScrolls: false })).toBe('horizontal')
+    expect(classify(30, 25, { swipeEnabled: true, scrollToProtect: false })).toBe('horizontal')
   })
 
-  it('reads the same arc as a scroll when the face has more than fits', () => {
-    expect(classify(30, 25, { swipeEnabled: true, faceScrolls: true })).toBe('vertical')
+  it('reads the same arc as a scroll when there is somewhere to scroll to', () => {
+    expect(classify(30, 25, { swipeEnabled: true, scrollToProtect: true })).toBe('vertical')
     // It still lets a clearly horizontal drag through.
-    expect(classify(60, 25, { swipeEnabled: true, faceScrolls: true })).toBe('horizontal')
+    expect(classify(60, 25, { swipeEnabled: true, scrollToProtect: true })).toBe('horizontal')
   })
 
   it('never swipes when the reader has turned swiping off', () => {
-    expect(classify(200, 0, { swipeEnabled: false, faceScrolls: false })).toBe('vertical')
+    expect(classify(200, 0, { swipeEnabled: false, scrollToProtect: false })).toBe('vertical')
   })
 
   it('treats a straight-down drag as a scroll either way', () => {
-    expect(classify(0, 40, { swipeEnabled: true, faceScrolls: false })).toBe('vertical')
-    expect(classify(0, 40, { swipeEnabled: true, faceScrolls: true })).toBe('vertical')
+    expect(classify(0, 40, { swipeEnabled: true, scrollToProtect: false })).toBe('vertical')
+    expect(classify(0, 40, { swipeEnabled: true, scrollToProtect: true })).toBe('vertical')
+  })
+})
+
+/**
+ * Reported from a phone: on a deck of long cards, swipes kept dying. The card
+ * would refuse to move and the reader had to lift and start again — which is
+ * the worst failure this gesture has, because nothing on screen says why.
+ *
+ * Two things were wrong. The strict ratio asked whether the face was a scroll
+ * container rather than whether it had anywhere left to scroll, so it was on
+ * for nearly every card; and the reading it fed was final, so a wrong one at
+ * 12px could not be undone by any amount of dragging afterwards.
+ */
+describe('taking back a reading that was wrong', () => {
+  it('lets a decisive sideways drag through after a scroll was assumed', () => {
+    expect(shouldRescue(RESCUE_PX, 10, false)).toBe(true)
+  })
+
+  it('will not act on a movement no larger than the one that misread it', () => {
+    // Rescuing at the activation distance would make the first reading
+    // pointless; it has to be a movement nobody would call ambiguous.
+    expect(shouldRescue(ACTIVATION_PX, 2, false)).toBe(false)
+    expect(shouldRescue(RESCUE_PX - 1, 0, false)).toBe(false)
+  })
+
+  it('leaves a real scroll alone, however far sideways it wanders', () => {
+    // The reader is reading, and the page under their finger has moved. Taking
+    // the card away from them here would be worse than the bug being fixed.
+    expect(shouldRescue(200, 10, true)).toBe(false)
+  })
+
+  it('still wants horizontal to beat vertical', () => {
+    expect(shouldRescue(40, 60, false)).toBe(false)
+  })
+
+  it('works in both directions', () => {
+    expect(shouldRescue(-RESCUE_PX, 5, false)).toBe(true)
   })
 })
 
