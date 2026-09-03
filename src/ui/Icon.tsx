@@ -28,6 +28,7 @@ export type IconName =
   | 'close'
   | 'settings'
   | 'share'
+  | 'copy'
   | 'chevron'
   | 'check'
   | 'cross'
@@ -60,6 +61,15 @@ const PATHS: Record<IconName, JSX.Element> = {
     <>
       <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" />
       <path d="M12 15V3M8 7l4-4 4 4" />
+    </>
+  ),
+  // Lucide's copy. The share glyph stood here, which is the arrow the top bar
+  // uses to *open* this sheet — the same picture for "share this deck" and for
+  // "put the link on the clipboard".
+  copy: (
+    <>
+      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
     </>
   ),
   chevron: <path d="M9 5l7 7-7 7" />,

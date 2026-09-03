@@ -90,7 +90,7 @@ export function ShareSheet({ deckRef, name, markdown, onClose }: Props) {
     () => (
       <div class="row share-actions">
         <button class="primary" onClick={() => void copy()}>
-          <Icon name={copied ? 'check' : 'share'} />
+          <Icon name={copied ? 'check' : 'copy'} />
           {copied ? t('share.copied') : t('share.copy')}
         </button>
         {editUrl ? (
