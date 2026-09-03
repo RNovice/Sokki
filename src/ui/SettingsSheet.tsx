@@ -8,6 +8,9 @@ import { Icon } from './Icon'
 interface Props {
   settings: Settings
   onSettings: (patch: Partial<Settings>) => void
+  /** Only offered when there is something to tidy; see the button below. */
+  hasRecent: boolean
+  onManageRecent: () => void
   onClose: () => void
 }
 
@@ -16,7 +19,13 @@ interface Props {
  * Anything that shapes a round lives on the deck's own screen, where choosing
  * it cannot destroy a round already under way.
  */
-export function SettingsSheet({ settings, onSettings, onClose }: Props) {
+export function SettingsSheet({
+  settings,
+  onSettings,
+  hasRecent,
+  onManageRecent,
+  onClose,
+}: Props) {
   useEscapeToClose(onClose)
 
   return (
@@ -67,6 +76,24 @@ export function SettingsSheet({ settings, onSettings, onClose }: Props) {
             onChange={(checked) => onSettings({ swipeEnabled: checked })}
           />
         </div>
+
+        {/*
+          Only when there is something to tidy. A control that does nothing is
+          worse than an absent one, and this is the only place the app admits to
+          keeping anything, so it should appear exactly when that is true.
+
+          It opens a list rather than emptying one. The button that emptied it
+          outright was one tap from destroying the only record of which sheets
+          have been opened, and was also the only way to remove anything — so it
+          was what people reached for to remove one thing.
+        */}
+        {hasRecent ? (
+          <div class="row">
+            <button class="quiet" onClick={onManageRecent}>
+              {t('settings.clearRecent')}
+            </button>
+          </div>
+        ) : null}
 
       </div>
     </div>

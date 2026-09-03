@@ -80,6 +80,7 @@ export default {
   'settings.language': '言語',
   'settings.theme': 'テーマ',
   'settings.swipe': 'スワイプ操作',
+  'settings.clearRecent': '最近の履歴を消去',
   'settings.deckSection': 'このデッキ',
   'settings.direction': '出題方向',
   'settings.count': '1 ラウンドの枚数',

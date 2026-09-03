@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'preact/hooks'
 import { BUILTIN_DECKS, markdownFromInput, parseSheetInput } from '../core/deck'
-import { forgetDeck, refFromRecent, type RecentDeck } from '../core/recent'
+import type { RecentDeck } from '../core/recent'
 import type { DeckRef } from '../core/types'
-import { currentLocale, formatRelativeTime, t, tp } from '../i18n'
+import { currentLocale, t, tp } from '../i18n'
 import { CardModal } from './CardModal'
 import { Icon } from './Icon'
+import { RecentList } from './RecentList'
 
 interface Props {
   /**
@@ -13,8 +14,6 @@ interface Props {
    */
   onOpen: (ref: DeckRef, markdown?: boolean) => void
   recent: RecentDeck[]
-  /** Owned by App, which holds the list; this reports what is left of it. */
-  onRecentChange: (next: RecentDeck[]) => void
 }
 
 type Panel = 'none' | 'recent' | 'examples' | 'howto'
@@ -25,7 +24,7 @@ type Panel = 'none' | 'recent' | 'examples' | 'howto'
  * opens a panel rather than expanding in place, so the page never reflows under
  * the reader and its height does not depend on how much they have used it.
  */
-export function Landing({ onOpen, recent, onRecentChange }: Props) {
+export function Landing({ onOpen, recent }: Props) {
   const [input, setInput] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
   const [panel, setPanel] = useState<Panel>('none')
@@ -148,44 +147,9 @@ export function Landing({ onOpen, recent, onRecentChange }: Props) {
 
       {panel === 'recent' ? (
         <CardModal title={t('landing.recent')} onClose={() => setPanel('none')}>
-          <div class="row-list">
-            {recent.map((entry) => {
-              // A link can arrive with no name at all; the deck screen's own
-              // fallback is used so the two never disagree.
-              const name = entry.title || t('deck.untitled')
-              return (
-                <div key={`${entry.sheetId}:${entry.gid}`} class="row-pair">
-                  <button class="row-link" onClick={() => onOpen(refFromRecent(entry))}>
-                    <span class="grow">
-                      <span class="name">{name}</span>
-                      <br />
-                      <span class="sub">
-                        {formatRelativeTime(entry.lastOpened)} · {tp('deck.cards', entry.cardCount)}
-                      </span>
-                    </span>
-                    <Icon name="chevron" class="deck-arrow" />
-                  </button>
-                  {/*
-                    A sibling of the row rather than inside it: a button cannot
-                    contain a button, and the whole row is one.
-                  */}
-                  <button
-                    class="row-forget"
-                    aria-label={t('recent.forget', { name })}
-                    onClick={() => {
-                      const next = forgetDeck(entry)
-                      onRecentChange(next)
-                      // Nothing left to list, and an empty panel is not an
-                      // answer to "show me my recent decks".
-                      if (next.length === 0) setPanel('none')
-                    }}
-                  >
-                    <Icon name="trash" />
-                  </button>
-                </div>
-              )
-            })}
-          </div>
+          {/* Opening only. Removing one is under Settings, away from the
+              surface people use to start studying. */}
+          <RecentList recent={recent} onOpen={(ref) => onOpen(ref)} />
         </CardModal>
       ) : null}
 

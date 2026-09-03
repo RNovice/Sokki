@@ -498,26 +498,19 @@ p {
 }
 
 /*
- * A row with a way to remove it, for the recent list.
+ * A recent deck shown for tidying rather than for opening.
  *
- * The remove button is a sibling of the row rather than a child, because the
- * row is itself a button and a button cannot contain one. Which means the two
- * are laid out here rather than inheriting the row's own padding: the row keeps
- * the whole width it had, and the button is a fixed column beside it.
- *
- * It carries no border or ground of its own. Given one it becomes a second card
- * the same height as the row, and the list reads as pairs of equal things
- * rather than as decks with a way to remove them. Quiet also matters because
- * its neighbour is a full-width target people tap without looking: a red cross
- * sitting there permanently reads as a warning about the row.
- *
- * It still takes its colour on hover and on keyboard focus, which is where the
- * confirmation that this one is destructive belongs.
+ * The bin is a sibling of the row and comes before it. Outside, because the row
+ * beside it is inert here and a control inside would say otherwise; before,
+ * because the thumb reaching for it then travels away from the list rather than
+ * across the rows it is not aiming at.
  */
 .row-pair {
   display: flex;
-  align-items: stretch;
-  gap: 4px;
+  /* Centred, not stretched: stretching is what made the target the height of
+     the whole row. See .row-forget. */
+  align-items: center;
+  gap: 8px;
 }
 
 .row-pair .row-link {
@@ -527,10 +520,46 @@ p {
   min-width: 0;
 }
 
+/*
+ * A row that is only there to be read.
+ *
+ * It keeps the shape of the one that opens a deck, so the list still reads as
+ * decks, and drops everything that offered: no hover, no chevron, no pointer
+ * cursor. The box itself has to be redrawn here because .row-link only carries
+ * the layout — the border, ground and radius come from the `button` element
+ * rule above, and this one is a div precisely so that it cannot be pressed.
+ */
+.row-static {
+  color: var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  cursor: default;
+}
+
+/*
+ * The bin, sized to itself.
+ *
+ * It used to fill a 44px column at the row's full height — 44×71 of hit area
+ * for a 16px glyph, most of it nowhere near the thing it was drawn on. That is
+ * the wrong direction to be generous in for the one control here that destroys
+ * something.
+ *
+ * 32px square is the compromise: it reads as the icon rather than as a column,
+ * and it is still large enough to hit. That is under the 44px normally asked of
+ * a touch target, which is a deliberate trade — the row beside it does nothing
+ * at all in this list, so a miss costs a tap rather than the wrong action, and
+ * the cost of the opposite miss is a deck the reader did not mean to remove.
+ */
 .row-forget {
   flex: none;
-  /* At the 44px minimum touch target, and the row's full height. */
-  width: 44px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  /* The `button` rule's 40px floor would otherwise stretch it back into a
+     column, which is the shape being got rid of. */
+  min-height: 32px;
   padding: 0;
   border-color: transparent;
   background: transparent;
@@ -543,7 +572,12 @@ p {
   background: var(--bad-soft);
 }
 
-.row-link:hover:not(:disabled) {
+/*
+ * `:disabled` never matches a div, so the static row is excluded by name — a
+ * row that lights up under the pointer and then does nothing is a worse lie
+ * than no feedback at all.
+ */
+.row-link:not(.row-static):hover:not(:disabled) {
   border-color: var(--accent);
   background: var(--surface);
 }

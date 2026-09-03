@@ -84,6 +84,7 @@ export default {
   'settings.language': 'Language',
   'settings.theme': 'Theme',
   'settings.swipe': 'Swipe gestures',
+  'settings.clearRecent': 'Clear recent decks',
   'settings.deckSection': 'This deck',
   'settings.direction': 'Direction',
   'settings.count': 'Cards per round',

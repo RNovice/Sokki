@@ -11,6 +11,7 @@ import {
 } from './core/deck'
 import { loadPrefs, loadSettings, savePrefs, saveSettings } from './core/prefs'
 import {
+  forgetDeck,
   loadRecent,
   rememberDeck,
   renameRecent,
@@ -30,9 +31,11 @@ import { t, loadLocale } from './i18n'
 import { measureAsync } from './monitoring'
 import { applyTheme, watchSystemTheme } from './theme/apply'
 import { Banners } from './ui/Banners'
+import { CardModal } from './ui/CardModal'
 import { DeckHome } from './ui/DeckHome'
 import { Landing } from './ui/Landing'
 import { Quiz } from './ui/Quiz'
+import { RecentList } from './ui/RecentList'
 import { Result } from './ui/Result'
 import { SettingsSheet } from './ui/SettingsSheet'
 import { ShareSheet } from './ui/ShareSheet'
@@ -84,7 +87,7 @@ export function App() {
   /** Shown once, after the cards were re-read because the source moved. */
   const [justRefreshed, setJustRefreshed] = useState(false)
   const [sourceChanged, clearSourceChanged] = useSourceChanged()
-  const [sheet, setSheet] = useState<'none' | 'settings' | 'share'>('none')
+  const [sheet, setSheet] = useState<'none' | 'settings' | 'share' | 'recent'>('none')
   /*
    * Held here rather than read inside Landing, so that clearing the history
    * from the settings sheet — which sits over the landing page without
@@ -369,7 +372,6 @@ export function App() {
           {stage.name === 'landing' ? (
             <Landing
               recent={recent}
-              onRecentChange={setRecent}
               onOpen={(ref, markdown) => void openRef(ref, true, markdown)}
             />
           ) : null}
@@ -464,8 +466,30 @@ export function App() {
         <SettingsSheet
           settings={settings}
           onSettings={updateSettings}
+          hasRecent={recent.length > 0}
+          onManageRecent={() => setSheet('recent')}
           onClose={() => setSheet('none')}
         />
+      ) : null}
+
+      {/*
+        A replacement for the settings sheet rather than something over it: one
+        overlay at a time is how the rest of the app behaves, and two backdrops
+        would dim and blur the page twice. Closing goes back to settings, which
+        is where the reader pressed the button — and the moment nothing is left
+        to tidy it goes back on its own, because an empty list is not an answer.
+      */}
+      {sheet === 'recent' ? (
+        <CardModal title={t('settings.clearRecent')} onClose={() => setSheet('settings')}>
+          <RecentList
+            recent={recent}
+            onForget={(entry) => {
+              const next = forgetDeck(entry)
+              setRecent(next)
+              if (next.length === 0) setSheet('settings')
+            }}
+          />
+        </CardModal>
       ) : null}
 
       {sheet === 'share' && activeRef ? (

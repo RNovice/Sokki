@@ -80,6 +80,7 @@ export default {
   'settings.language': '語言',
   'settings.theme': '主題',
   'settings.swipe': '啟用滑動手勢',
+  'settings.clearRecent': '清除最近使用',
   'settings.deckSection': '這副牌',
   'settings.direction': '方向',
   'settings.count': '每輪題數',
