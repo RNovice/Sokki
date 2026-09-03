@@ -22,7 +22,6 @@ export default {
   'landing.howtoSub': 'A 列が問題、B 列が答え。手順は 3 つ',
   'landing.howtoTitle': 'シートの作り方',
   'landing.howtoA': 'A 列が表（問題）、B 列が裏（答え）。',
-  'landing.howtoNoHeader': '見出し行は不要です。1 行目が最初のカードになります。',
   'landing.howtoShare': 'Google スプレッドシートで「共有」→「リンクを知っている全員」→「閲覧者」。',
   'landing.howtoTab': 'カードが最初のシートにない場合は、そのシートを開いてからブラウザのアドレスバーの URL をコピーしてください。「共有」ボタンのリンクにはシート情報が含まれません。',
   'landing.howtoPublic': 'リンクを知っている人は誰でも読めます。個人情報は入れないでください。',

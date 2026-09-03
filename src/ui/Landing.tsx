@@ -60,6 +60,11 @@ export function Landing({ onOpen, recent }: Props) {
    * characters of a spreadsheet URL: 42 renders of Landing and 126 of Icon,
    * three chevrons rebuilt for every keystroke.
    */
+  /*
+   * The locale is a dependency of anything that calls t(), because t() reads
+   * module state the linter cannot see. Without it this subtree keeps the words
+   * it was first built with, and switching language leaves it behind.
+   */
   const rows = useMemo(
     () => (
       <div class="row-list">
@@ -192,7 +197,6 @@ export function Landing({ onOpen, recent }: Props) {
         <CardModal title={t('landing.howtoTitle')} onClose={() => setPanel('none')}>
           <ol>
             <li>{t('landing.howtoA')}</li>
-            <li>{t('landing.howtoNoHeader')}</li>
             <li>{t('landing.howtoShare')}</li>
             {/* Last because it is conditional: most sheets have one tab. */}
             <li>{t('landing.howtoTab')}</li>

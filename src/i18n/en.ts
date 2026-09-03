@@ -23,7 +23,6 @@ export default {
   'landing.howtoSub': 'Column A asks, column B answers — three steps',
   'landing.howtoTitle': 'How your sheet should look',
   'landing.howtoA': 'Column A is the front (the prompt), column B is the back (the answer).',
-  'landing.howtoNoHeader': 'No header row — row 1 is the first card.',
   'landing.howtoShare': 'In Google Sheets: Share → Anyone with the link → Viewer.',
   'landing.howtoTab': "If the cards are not on the first tab, open that tab and copy the URL from the browser's address bar — the Share button's link does not carry the tab.",
   'landing.howtoPublic': 'Anyone holding the link can then read the sheet, so keep private notes out of it.',
