@@ -378,6 +378,50 @@ p {
   font-size: 14px;
 }
 
+/*
+ * A refusal said twice.
+ *
+ * The message for a bad link is the same string every time, so a second bad
+ * paste re-renders to an identical notice and the screen looks like it did
+ * nothing. Landing keys this node on the number of refusals, so it remounts and
+ * this replays — the animation is the only thing distinguishing "again" from
+ * "still".
+ *
+ * Scoped to `.again` rather than every `.notice.bad`: the load-failure notice
+ * on the error screen is a whole screen state, and a screen that shakes itself
+ * on arrival is alarming rather than informative.
+ */
+@keyframes notice-again {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  70% {
+    transform: translateX(4px);
+  }
+}
+
+/* Something has to happen for a reader who has asked for less movement, or the
+   second attempt is as silent as before. A fade is a change without motion. */
+@keyframes notice-again-still {
+  from {
+    opacity: 0.3;
+  }
+}
+
+.notice.bad.again {
+  animation: notice-again 220ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notice.bad.again {
+    animation: notice-again-still 220ms ease;
+  }
+}
+
 .notice {
   border-left: 3px solid var(--accent);
   background: var(--surface);

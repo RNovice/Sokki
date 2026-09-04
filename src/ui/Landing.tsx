@@ -27,6 +27,17 @@ type Panel = 'none' | 'recent' | 'examples' | 'howto'
 export function Landing({ onOpen, recent }: Props) {
   const [input, setInput] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
+  /*
+   * Counts refusals, and exists only to be a key.
+   *
+   * Pasting a second bad link sets the same string, so nothing about the
+   * rendered notice changes and the screen answers a second attempt exactly as
+   * it answered the first: by looking identical. Keying the node on the count
+   * remounts it, which replays its animation and — because the node is new —
+   * makes role="alert" announce again rather than staying silent on an
+   * unchanged one.
+   */
+  const [refusals, setRefusals] = useState(0)
   const [panel, setPanel] = useState<Panel>('none')
 
   /*
@@ -46,6 +57,7 @@ export function Landing({ onOpen, recent }: Props) {
     const ref = parseSheetInput(input)
     if (!ref) {
       setProblem(t('landing.invalidUrl'))
+      setRefusals((n) => n + 1)
       return
     }
     setProblem(null)
@@ -114,7 +126,7 @@ export function Landing({ onOpen, recent }: Props) {
       <p class="muted">{t('app.tagline')}</p>
 
       {problem ? (
-        <div class="notice bad">
+        <div key={refusals} class="notice bad again" role="alert">
           <span>{problem}</span>
         </div>
       ) : null}
