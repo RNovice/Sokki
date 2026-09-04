@@ -143,6 +143,20 @@ check(
  */
 check('the manifest declares what language its unlocalized values are in', manifest.lang === 'en')
 
+/*
+ * The identity, which must never move.
+ *
+ * `id` is resolved against the origin and is what tells a browser one app from
+ * another. It is `/` because the manifest sits at the root, so `start_url: '.'`
+ * resolves to the same URL — which is what identity was before `id` existed
+ * here, and therefore what keeps every existing install intact.
+ *
+ * Changing it does not break a build or show up in a diff review as anything
+ * alarming. It silently gives everyone who installed the app a second icon and
+ * an empty copy of it, because the storage is keyed on identity too.
+ */
+check('the installed app keeps the identity it was installed under', manifest.id === '/')
+
 check(
   'every locale the unprefixed values do not cover is localized',
   JSON.stringify(Object.keys(manifest.name_localized).sort()) ===

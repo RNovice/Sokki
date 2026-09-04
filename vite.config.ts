@@ -297,6 +297,22 @@ export default defineConfig(({ mode }) => {
          * detect and nothing to break. Chrome and Edge read it from 148.
          */
         ...localizedManifest,
+        /*
+         * The app's identity, pinned rather than inferred.
+         *
+         * Without this, identity is derived from the processed `start_url`, so
+         * editing that would make the browser compute a different app and
+         * leave anyone who had installed the old one with a second icon. The
+         * obvious future edit is exactly that — a query on start_url to count
+         * launches from the installed app.
+         *
+         * It has to be `/`, and nothing else. The manifest is served from the
+         * root, so `start_url: '.'` resolves to `https://host/`, and identity
+         * today *is* that URL; `/` resolves to the same thing and so preserves
+         * every existing install. Any other value resolves elsewhere and forks
+         * all of them. scripts/check-built.mjs holds it to that.
+         */
+        id: '/',
         name: en['app.name'],
         short_name: en['app.name'],
         description: en['app.tagline'],
