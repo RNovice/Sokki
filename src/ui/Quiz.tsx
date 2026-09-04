@@ -149,6 +149,28 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
     [onAnswer],
   )
 
+  /*
+   * Where focus was when a rating took it away, so Tab can put it back.
+   *
+   * Rating a card by mouse or by shortcut leaves a ring on a control that had
+   * nothing to do with it — the pointer gave 「我會」 focus on the way past, and
+   * it keeps it, lit, over a card it never answered. Dropping focus clears
+   * that, but dropping it into nowhere costs a keyboard reader their place:
+   * Tab would restart from the top of the page.
+   *
+   * So it is remembered rather than discarded, and the next Tab returns it.
+   * Only remembered, never held: anything the reader focuses themselves
+   * replaces it, and an element that has left the document is not restored to.
+   */
+  const droppedFocus = useRef<HTMLElement | null>(null)
+
+  const dropFocus = useCallback(() => {
+    const active = document.activeElement
+    if (!(active instanceof HTMLElement) || active === document.body) return
+    droppedFocus.current = active
+    active.blur()
+  }, [])
+
   /* ------------------------------------------------------------- keyboard */
 
   useEffect(() => {
@@ -178,13 +200,29 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
        * focus was given by a pointer, and navigation is the one thing that
        * revokes it. Read here before the browser moves focus, so the card is
        * already loud again if Tab lands on it.
+       *
+       * It is also where a dropped focus comes back. Blurring leaves the
+       * browser's idea of "where Tab resumes from" at the top of the document,
+       * so without this the reader is thrown to the first control on the page
+       * rather than the one they were on.
        */
-      if (event.key === 'Tab') cardEl.current?.removeAttribute('data-quiet-focus')
+      if (event.key === 'Tab') {
+        cardEl.current?.removeAttribute('data-quiet-focus')
+        const back = droppedFocus.current
+        droppedFocus.current = null
+        if (back?.isConnected && document.activeElement === document.body) {
+          event.preventDefault()
+          back.focus()
+        }
+        return
+      }
       if (event.key === '1' || event.key === 'ArrowRight') {
         event.preventDefault()
+        dropFocus()
         commit(true)
       } else if (event.key === '2' || event.key === 'ArrowLeft') {
         event.preventDefault()
+        dropFocus()
         commit(false)
       }
     }
@@ -206,7 +244,7 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
       window.removeEventListener('keydown', onKey)
       window.removeEventListener('focusout', onFocusOut)
     }
-  }, [flip, commit])
+  }, [flip, commit, dropFocus])
 
   /* --------------------------------------------------------------- swipe */
 
@@ -500,18 +538,38 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
   const answers = useMemo(
     () => (
       <div class="answers">
-        <button class={`unknown${armed === 'unknown' ? ' armed' : ''}`} onClick={() => commit(false)}>
+        {/*
+          `detail` is how a pointer press is told from a keyboard one: a real
+          click counts clicks and reports 1 or more, while the click Enter
+          synthesises on a focused button reports 0. Only the pointer's leaves a
+          ring nobody asked for, and only the pointer's is dropped — a reader
+          working the button from the keyboard keeps it, and keeps being able to
+          rate the next card with another Enter.
+        */}
+        <button
+          class={`unknown${armed === 'unknown' ? ' armed' : ''}`}
+          onClick={(event) => {
+            if (event.detail > 0) dropFocus()
+            commit(false)
+          }}
+        >
           <Icon name="cross" />
           {t('quiz.unknown')}
         </button>
-        <button class={`known${armed === 'known' ? ' armed' : ''}`} onClick={() => commit(true)}>
+        <button
+          class={`known${armed === 'known' ? ' armed' : ''}`}
+          onClick={(event) => {
+            if (event.detail > 0) dropFocus()
+            commit(true)
+          }}
+        >
           <Icon name="check" />
           {t('quiz.known')}
         </button>
       </div>
     ),
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-    [armed, commit, locale],
+    [armed, commit, dropFocus, locale],
   )
 
   if (!card || index === null) return null
