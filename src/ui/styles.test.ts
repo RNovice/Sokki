@@ -80,6 +80,33 @@ describe('long answers stay readable', () => {
     // …and the measure has to stay a maximum rather than becoming a size.
     expect(text).toMatch(/max-width:/)
   })
+
+  /**
+   * …except that one rule takes the width away again, on purpose.
+   *
+   * A divider has to reach both edges of the card to be one, so .md-wide gives
+   * the box the whole card. On a card whose only structure is a divider — two
+   * short terms with `---` between them — that leaves the terms against the
+   * card's left edge with most of the card empty beside them, which is the
+   * exact appearance the shrink-to-fit box exists to avoid.
+   *
+   * The answer is not to re-centre the text, which would put a long answer's
+   * left edge back to moving on every line. It is to apply the same mechanism
+   * one level down, to each run of text, and leave the rule spanning.
+   */
+  it('gives each run of text its own box when a divider widens the outer one', () => {
+    const runs = block('.md-wide:not(.md-prose) > .md-lines')
+    expect(runs).toMatch(/width:\s*fit-content/)
+    expect(runs).toMatch(/margin-inline:\s*auto/)
+    // Bounded, or a long line pushes the card wider than the card.
+    expect(runs).toMatch(/max-width:\s*100%/)
+  })
+
+  it('leaves prose out of it, because prose wants one shared left edge', () => {
+    // A heading and a list each centring on their own width is the opposite of
+    // what prose needs. `.md-prose` is already the test for "this is prose".
+    expect(DECLARATIONS).toMatch(/\.md-wide:not\(\.md-prose\)/)
+  })
 })
 
 describe('iOS zoom', () => {

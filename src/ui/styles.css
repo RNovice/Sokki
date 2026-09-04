@@ -963,6 +963,30 @@ p {
 }
 
 /*
+ * The one place the two rules above collide, and the fix for it.
+ *
+ * .face-text leaves short cards looking centred by never being wider than its
+ * text. .md-wide takes that away on purpose: a divider has to reach both edges,
+ * so the box is given the whole card. On a card whose only structure *is* a
+ * divider — two short terms with `---` between them — that combination put
+ * "apple" hard against the card's left edge with 512px of nothing beside it.
+ *
+ * So the mechanism is applied again one level down: each run of text becomes
+ * its own shrink-to-fit box, centred, and inherits `start` from above. Short
+ * terms centre; a long one fills the measure and gets its stable left edge; and
+ * the rule, which is not .md-lines, still spans everything.
+ *
+ * Not for prose. A heading and a list each centring on their own width is the
+ * opposite of what prose needs, which is one left edge shared down the page —
+ * and .md-prose is exactly the test for "this is prose".
+ */
+.md-wide:not(.md-prose) > .md-lines {
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+/*
  * Structure that is prose also changes how the text is set. Prose at question
  * size overflows a card within a line or two, and a bulleted list centred on
  * its own ragged edges is unreadable — so it drops to reading size, loses the
