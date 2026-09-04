@@ -15,6 +15,20 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
+    /*
+     * So vite.config.ts can write the extension on its own imports.
+     *
+     * Vite is moving to loading the config with Node's own TypeScript support
+     * instead of bundling it through esbuild first, and Node resolves modules
+     * by ESM rules — which means fully specified paths. Extensionless imports
+     * will stop working when that becomes the default, and the config has
+     * three of them: it reads the locale files so the installed app's name
+     * cannot drift from the one inside it.
+     *
+     * This permits the extension rather than requiring it, so nothing under
+     * src/ changes. It needs noEmit, which is above.
+     */
+    "allowImportingTsExtensions": true,
     "types": ["vite/client", "node"],
     "paths": {
       "react": ["./node_modules/preact/compat/"],

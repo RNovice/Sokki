@@ -3,9 +3,9 @@ import preact from '@preact/preset-vite'
 import { VitePWA } from 'vite-plugin-pwa'
 // Read from the same place the interface reads them, so the installed app's
 // name cannot drift from the one inside it.
-import en from './src/i18n/en'
-import ja from './src/i18n/ja'
-import zhHant from './src/i18n/zh-Hant'
+import en from './src/i18n/en.ts'
+import ja from './src/i18n/ja.ts'
+import zhHant from './src/i18n/zh-Hant.ts'
 
 /**
  * The `*_localized` manifest members are newer than vite-plugin-pwa's types, so
