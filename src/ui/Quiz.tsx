@@ -160,8 +160,34 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
       if (event.key === ' ' || event.key === 'Enter') {
         event.preventDefault()
         flip()
+        /*
+         * Space is a shortcut for the whole screen, not a press of whatever
+         * holds focus, and the preventDefault above stops that element
+         * activating. But the browser still marks it :focus-visible, because a
+         * key was pressed on it — so answering with the mouse and then pressing
+         * space lit a ring around 「我會」 that space would never press. A ring
+         * naming the wrong control is worse than no ring.
+         *
+         * Focus moves to the card instead, onto the thing that actually acted,
+         * and quietly, because this is a shortcut rather than navigation. Only
+         * when the card does not already hold focus: a reader who arrived by
+         * Tab keeps the ring they were given, which is the case the ring is
+         * for. Pointer-given focus is marked quiet at pointerdown, so the card
+         * clicked with a mouse is already covered.
+         */
+        const node = cardEl.current
+        if (node && document.activeElement !== node) {
+          node.setAttribute('data-quiet-focus', '')
+          node.focus({ preventScroll: true })
+        }
         return
       }
+      /*
+       * Any other key is navigation rather than the shortcut, so the ring is
+       * wanted again — Tab in particular, which is read here before the browser
+       * moves focus, so the card is already loud again if Tab lands on it.
+       */
+      cardEl.current?.removeAttribute('data-quiet-focus')
       if (event.key === '1' || event.key === 'ArrowRight') {
         event.preventDefault()
         commit(true)
@@ -170,8 +196,24 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
         commit(false)
       }
     }
+    /*
+     * Only when the card itself is the one losing focus.
+     *
+     * A bare handler clears the flag it was just given: pressing space while a
+     * button holds focus fires focusout *on that button* as focus moves to the
+     * card, which arrives after the attribute is set and wipes it — so the ring
+     * came back, on the card this time. The target check is what makes the
+     * clearing about the card rather than about any focus change on the page.
+     */
+    const onFocusOut = (event: FocusEvent) => {
+      if (event.target === cardEl.current) cardEl.current?.removeAttribute('data-quiet-focus')
+    }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('focusout', onFocusOut)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('focusout', onFocusOut)
+    }
   }, [flip, commit])
 
   /* --------------------------------------------------------------- swipe */
@@ -209,6 +251,14 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
   )
 
   const onPointerDown = (event: PointerEvent) => {
+    /*
+     * A pointer is about to give the card focus, and focus given by a pointer
+     * never wants a ring — the browser agrees until a key is pressed, at which
+     * point it promotes the element and draws one. Marking it here means the
+     * card clicked with a mouse and then flipped with space stays quiet, while
+     * a card reached by Tab is untouched and keeps its ring.
+     */
+    cardEl.current?.setAttribute('data-quiet-focus', '')
     if (leaving.current) return
     gesture.current = {
       phase: 'pending',
@@ -491,7 +541,6 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
           style={{ transform: `translateX(${dx}px) rotate(${tilt}deg)` }}
           flipped={showingBack}
           label={t('quiz.flip')}
-          onFlip={flip}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}

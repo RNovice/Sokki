@@ -250,6 +250,20 @@ button.icon-only {
   border-radius: 4px;
 }
 
+/*
+ * …except when the card took focus because space was pressed.
+ *
+ * Space flips the card wherever focus happens to be, so Quiz moves focus onto
+ * the card to keep the ring off a control the shortcut will not press. That
+ * move is a side effect of the shortcut rather than navigation, and the card
+ * turning over is its own feedback, so it draws no ring. Tab never sets this
+ * attribute, so arriving that way still shows one — which is the case the ring
+ * exists for.
+ */
+.card[data-quiet-focus]:focus-visible {
+  outline: none;
+}
+
 input[type='text'],
 input[type='url'],
 input[type='number'],

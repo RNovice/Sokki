@@ -18,7 +18,6 @@ interface Props {
   back: ComponentChildren
   flipped: boolean
   label: string
-  onFlip: () => void
   cardRef?: Ref<HTMLDivElement>
   className?: string
   style?: JSX.CSSProperties
@@ -44,7 +43,6 @@ export function FlipCard({
   back,
   flipped,
   label,
-  onFlip,
   cardRef,
   className,
   style,
@@ -58,14 +56,18 @@ export function FlipCard({
       role="button"
       tabIndex={0}
       aria-label={label}
-      onKeyDown={(event: KeyboardEvent) => {
-        // The quiz binds space and enter globally; the landing page does not,
-        // so the card has to answer for itself when it holds focus.
-        if (event.key === ' ' || event.key === 'Enter') {
-          event.preventDefault()
-          onFlip()
-        }
-      }}
+      /*
+       * No key handling here, deliberately. This used to answer space and
+       * enter itself, on the reasoning that only the quiz bound them globally
+       * and a card elsewhere would need its own — but there is no card
+       * elsewhere, and the quiz's window listener sees the same keypress. Both
+       * ran, both flipped, and two flips look exactly like none: pressing space
+       * on a card you had clicked appeared to do nothing at all.
+       *
+       * Quiz owns space and enter for the whole screen, which it has to anyway
+       * — the card does not hold focus until something gives it focus, and the
+       * usual way to reach a card is to not touch the keyboard at all.
+       */
       {...pointer}
     >
       <div class={`card-inner${flipped ? ' flipped' : ''}`}>
