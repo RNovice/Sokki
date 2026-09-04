@@ -18,6 +18,7 @@ interface Props {
   back: ComponentChildren
   flipped: boolean
   label: string
+  onFlip: () => void
   cardRef?: Ref<HTMLDivElement>
   className?: string
   style?: JSX.CSSProperties
@@ -43,6 +44,7 @@ export function FlipCard({
   back,
   flipped,
   label,
+  onFlip,
   cardRef,
   className,
   style,
@@ -57,17 +59,19 @@ export function FlipCard({
       tabIndex={0}
       aria-label={label}
       /*
-       * No key handling here, deliberately. This used to answer space and
-       * enter itself, on the reasoning that only the quiz bound them globally
-       * and a card elsewhere would need its own — but there is no card
-       * elsewhere, and the quiz's window listener sees the same keypress. Both
-       * ran, both flipped, and two flips look exactly like none: pressing space
-       * on a card you had clicked appeared to do nothing at all.
+       * Enter only, and that split is the point.
        *
-       * Quiz owns space and enter for the whole screen, which it has to anyway
-       * — the card does not hold focus until something gives it focus, and the
-       * usual way to reach a card is to not touch the keyboard at all.
+       * Space is a shortcut for the whole screen and Quiz answers it on window,
+       * so handling it here as well would flip twice — which looks exactly like
+       * not flipping, and did. Enter is the opposite: it belongs to whatever
+       * holds focus, so the card has to answer for itself, and role="button"
+       * requires it to.
        */
+      onKeyDown={(event: KeyboardEvent) => {
+        if (event.key !== 'Enter') return
+        event.preventDefault()
+        onFlip()
+      }}
       {...pointer}
     >
       <div class={`card-inner${flipped ? ' flipped' : ''}`}>

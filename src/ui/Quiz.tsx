@@ -157,37 +157,29 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
       const target = event.target as HTMLElement | null
       if (target && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName)) return
 
-      if (event.key === ' ' || event.key === 'Enter') {
+      /*
+       * Space turns the card over, wherever focus happens to be, and leaves
+       * focus exactly where it found it.
+       *
+       * Enter is deliberately not here. The two keys used to do the same thing,
+       * which meant a reader who had tabbed to 「我會」 could not press it with
+       * either — the shortcut ate both, and the only way to answer from the
+       * keyboard was 1, 2 or an arrow. Now Enter belongs to whatever holds
+       * focus, the way it does everywhere else, and the card answers it too
+       * because role="button" has to.
+       */
+      if (event.key === ' ') {
         event.preventDefault()
         flip()
-        /*
-         * Space is a shortcut for the whole screen, not a press of whatever
-         * holds focus, and the preventDefault above stops that element
-         * activating. But the browser still marks it :focus-visible, because a
-         * key was pressed on it — so answering with the mouse and then pressing
-         * space lit a ring around 「我會」 that space would never press. A ring
-         * naming the wrong control is worse than no ring.
-         *
-         * Focus moves to the card instead, onto the thing that actually acted,
-         * and quietly, because this is a shortcut rather than navigation. Only
-         * when the card does not already hold focus: a reader who arrived by
-         * Tab keeps the ring they were given, which is the case the ring is
-         * for. Pointer-given focus is marked quiet at pointerdown, so the card
-         * clicked with a mouse is already covered.
-         */
-        const node = cardEl.current
-        if (node && document.activeElement !== node) {
-          node.setAttribute('data-quiet-focus', '')
-          node.focus({ preventScroll: true })
-        }
         return
       }
       /*
-       * Any other key is navigation rather than the shortcut, so the ring is
-       * wanted again — Tab in particular, which is read here before the browser
-       * moves focus, so the card is already loud again if Tab lands on it.
+       * Tab, and only Tab, makes the ring wanted again: the flag records that
+       * focus was given by a pointer, and navigation is the one thing that
+       * revokes it. Read here before the browser moves focus, so the card is
+       * already loud again if Tab lands on it.
        */
-      cardEl.current?.removeAttribute('data-quiet-focus')
+      if (event.key === 'Tab') cardEl.current?.removeAttribute('data-quiet-focus')
       if (event.key === '1' || event.key === 'ArrowRight') {
         event.preventDefault()
         commit(true)
@@ -537,6 +529,7 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
         <FlipCard
           key={marker}
           cardRef={cardEl}
+          onFlip={flip}
           className={`${dragging ? 'dragging' : ''}${exiting ? ' exiting' : ''}`.trim()}
           style={{ transform: `translateX(${dx}px) rotate(${tilt}deg)` }}
           flipped={showingBack}
