@@ -271,6 +271,23 @@ export default defineConfig(({ mode }) => {
     preact(),
     VitePWA({
       registerType: 'autoUpdate',
+      /*
+       * Deferred, because the script it injects is parser-blocking by default
+       * and has nothing to block for.
+       *
+       * The whole of registerSW.js is a `load` listener that registers the
+       * worker — so it does nothing at all until the page has finished loading,
+       * and the default injection nonetheless puts it in <head> without defer,
+       * where the parser stops for it before it has even reached the static
+       * landing shell in <body>. Measured on the live site at 198ms of round
+       * trip in front of the markup that paints.
+       *
+       * Not 'inline', which would otherwise be the obvious answer: the CSP
+       * allows exactly one inline script by hash, sealed at build time by
+       * scripts/seal-csp.mjs, and a second one would either be blocked or force
+       * that seal to guess which script it is meant to be hashing.
+       */
+      injectRegister: 'script-defer',
       includeAssets: ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png'],
       manifest: {
         /*

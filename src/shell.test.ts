@@ -69,6 +69,27 @@ describe.skipIf(BUILT === null)('the static landing shell', () => {
     if (beacon) expect(beacon[1]).toMatch(/\bsrc=/)
   })
 
+  /**
+   * Nothing in <head> may stop the parser reaching the shell.
+   *
+   * The shell exists so the landing page paints without waiting for the
+   * bundle. A classic `<script src>` in <head> undoes that on its own: the
+   * parser halts there, a round trip ahead of the markup it was going to
+   * paint. registerSW.js was doing exactly that by default — and it is a
+   * `load` listener, so it had nothing to halt for.
+   *
+   * Pinned rather than fixed once, because the ways it comes back are all
+   * quiet: a plugin's default, a snippet pasted into the head, a `defer`
+   * dropped in a refactor.
+   */
+  it('lets nothing in the head stop the parser reaching the shell', () => {
+    const head = BUILT!.slice(0, BUILT!.indexOf('</head>'))
+    const blocking = [...head.matchAll(/<script[^>]*\bsrc=[^>]*>/g)]
+      .map(([tag]) => tag)
+      .filter((tag) => !/\bdefer\b|\basync\b|type="module"/.test(tag))
+    expect(blocking).toEqual([])
+  })
+
   it('leaves the markup the app renders into', () => {
     // main.tsx empties #app before rendering, so the shell only has to look
     // right — but it has to be inside #app for that emptying to reach it.
