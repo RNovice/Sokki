@@ -340,6 +340,49 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
     if (!leaving.current) setDx(0)
   }
 
+  /*
+   * The half of the direction lock the browser owns.
+   *
+   * The phase in `gesture` locks our own reading until the touch ends, which is
+   * what "decide once" is supposed to mean. It was only ever half of it. The
+   * card declares `touch-action: pan-y`, which hands vertical panning to the
+   * browser, and the browser runs its own direction test with its own
+   * thresholds. When it decides the gesture is a scroll it takes the pointer
+   * away and fires pointercancel — mid-drag, with the card already following
+   * the finger. That is the swipe that dies halfway and springs back.
+   *
+   * preventDefault on touchmove is the only thing that stops it, and it has to
+   * come from a listener that is not passive. It is attached here rather than
+   * through JSX so that `passive: false` is written down: the default for a
+   * touch listener on an ordinary element is already non-passive, but it is a
+   * default nobody should have to remember, and the whole fix rests on it.
+   *
+   * It also has to exist before the touch starts. Chrome decides at touchstart
+   * whether the region has a non-passive listener at all, and hands scrolling
+   * to the compositor if it does not — so one attached when the drag begins
+   * comes too late to be consulted.
+   *
+   * The cost is that this region can no longer be scrolled on the compositor
+   * alone. The handler is a property read and a comparison, but scrolling a
+   * long card now waits on the main thread, and that is the trade: a swipe that
+   * always finishes, against a scroll that is no longer free.
+   *
+   * Re-attached per card, because FlipCard is keyed on the marker and the
+   * element underneath is a new one each time.
+   */
+  useEffect(() => {
+    const node = cardEl.current
+    if (!node) return
+    const holdTheLine = (event: TouchEvent) => {
+      if (gesture.current.phase !== 'horizontal') return
+      // False once the browser has already committed to scrolling; there is
+      // nothing left to prevent and calling it would only warn.
+      if (event.cancelable) event.preventDefault()
+    }
+    node.addEventListener('touchmove', holdTheLine, { passive: false })
+    return () => node.removeEventListener('touchmove', holdTheLine)
+  }, [marker])
+
   /* -------------------------------------------------------------- render */
 
   /*
