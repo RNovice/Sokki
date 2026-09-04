@@ -137,6 +137,18 @@ export function App() {
 
     if (push) history.pushState({}, '', refToQuery(ref, opening.markdown))
     setStage({ name: 'loading', ref })
+    /*
+     * Before the fetch, not after it.
+     *
+     * The title is `prefs?.name || ref.title`, and prefs used to be replaced
+     * only once the cards were in hand — so for the whole of a slow load it
+     * still held the *previous* deck's, and both the tab and the header sat
+     * there naming a deck the reader had already left. These are read
+     * synchronously from storage, so there is nothing to wait for: by the time
+     * the spinner appears the name is the one being loaded, which is also what
+     * makes a shared link's `?t=` show up straight away instead of on arrival.
+     */
+    setPrefs(opening)
     setSession(null)
     setStudying(false)
 
@@ -152,11 +164,6 @@ export function App() {
           cards.length,
         ),
       )
-      // Initialised here, where the cards are already in hand, rather than in
-      // an effect watching them. Watching them meant that re-reading the deck
-      // after the source moved re-ran the whole open sequence and wiped the
-      // very notice that said it had been re-read.
-      setPrefs(opening)
       setJustRefreshed(false)
       // Restored, not resumed: an interrupted round is offered on the deck's
       // home screen rather than dropping the reader into a card they did not
