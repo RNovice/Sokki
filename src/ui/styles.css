@@ -882,8 +882,37 @@ p {
  * resolve to zero when there is not, which centres short text and leaves long
  * text starting at the top where it can be read.
  */
+/*
+ * Card text: a centred box holding text that is not centred.
+ *
+ * The two are easy to confuse, and the difference is the whole design. `margin:
+ * auto` centres the *box*, and the box is shrink-to-fit — it is a flex item
+ * with no width, so it is as wide as its longest line and no wider, up to the
+ * measure below. So `start` here does not left-align short cards against the
+ * card's edge: a one-word card gets a box the width of that word, sitting in
+ * the middle, and left-aligning one line inside its own width changes nothing.
+ * Measured: `apple` renders identically either way, 76px wide with 266px of
+ * card on both sides.
+ *
+ * What it changes is the case that needed changing. Centred text that wraps
+ * moves its left edge on every line, and the left edge is what the eye returns
+ * to; a four-line answer was four different starting points. Only text long
+ * enough to fill the box gets that treatment, and it gets it gradually, with no
+ * line count to cross and nothing to measure at runtime.
+ *
+ * The consequence worth knowing: several short lines align to the longest of
+ * them rather than each centring on its own. For a list of words that is the
+ * better reading, and it is why this is `start` on the block rather than
+ * something applied per line — CSS has no per-visual-line alignment, and
+ * faking it would mean measuring every line on every card and would leave a
+ * different left edge on each.
+ *
+ * `start` rather than `left` so a right-to-left deck would follow its own
+ * direction rather than this one's.
+ */
 .face-text {
   margin: auto;
+  text-align: start;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
   max-width: 34rem;

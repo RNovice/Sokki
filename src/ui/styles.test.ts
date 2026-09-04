@@ -55,6 +55,31 @@ describe('long answers stay readable', () => {
     expect(face).not.toMatch(/align-items:\s*center/)
     expect(face).not.toMatch(/justify-content:\s*center/)
   })
+
+  /**
+   * The card centres a box; the text inside it starts at the box's edge.
+   *
+   * That only reads as "short cards are centred, long ones are left-aligned"
+   * because the box is shrink-to-fit — a flex item with no width, as wide as
+   * its longest line. Give it a width and every one-word card jumps to the
+   * card's left edge, which looks like a bug and is nowhere near the
+   * declaration that caused it.
+   */
+  it('starts the text at the edge of its box rather than centring it', () => {
+    expect(block('.face-text')).toMatch(/text-align:\s*start/)
+  })
+
+  it('leaves the box free to shrink to its longest line', () => {
+    const text = block('.face-text')
+    // Each of these would stretch the box to the card and strand the rule
+    // above: a centred one-word card would left-align against the card edge.
+    expect(text).not.toMatch(/(^|[^-])width:\s*100%/)
+    expect(text).not.toMatch(/flex:\s*1/)
+    expect(text).not.toMatch(/flex-grow:\s*[1-9]/)
+    expect(text).not.toMatch(/align-self:\s*stretch/)
+    // …and the measure has to stay a maximum rather than becoming a size.
+    expect(text).toMatch(/max-width:/)
+  })
 })
 
 describe('iOS zoom', () => {

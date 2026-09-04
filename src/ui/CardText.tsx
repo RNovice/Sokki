@@ -41,10 +41,15 @@ export function CardText({ text, markdown, class: className }: Props) {
   /*
    * Two independent decisions. Any structure at all makes the face span the
    * card, because a divider has to reach both edges to be one. Structure that
-   * is *prose* — a heading, a list, a quote — additionally goes left-aligned at
-   * reading size, because centred prose is unreadable and question-size prose
-   * overflows. A face holding a word, emphasised or not, is nearly every card
-   * and gets neither.
+   * is *prose* — a heading, a list, a quote — additionally drops to reading
+   * size, because question-size prose overflows. A face holding a word,
+   * emphasised or not, is nearly every card and gets neither.
+   *
+   * Alignment is no longer one of these decisions. It used to be: plain text
+   * was centred and prose had to opt out of it. The face's box is shrink-to-fit
+   * and centred, so text can start at the box's edge without a short card
+   * moving — see .face-text — which makes the right alignment the same one for
+   * every card and leaves nothing here to decide.
    */
   const classes = [className, needsFullWidth(blocks) && 'md-wide', hasBlockStructure(blocks) && 'md-prose']
   return <div class={classes.filter(Boolean).join(' ')}>{blocks.map(block)}</div>
