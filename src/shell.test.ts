@@ -6,22 +6,20 @@ import { DEFAULT_SETTINGS } from './core/types'
 
 /**
  * index.html carries things the app also produces at runtime — the page title,
- * the landing page's own markup, the ground colour of every theme. Each of
- * those is a second copy, and a second copy drifts. The failures it causes are
- * quiet ones: a tab that flickers, a page that shifts, a flash of white on a
- * dark theme. This is where they are caught.
+ * the ground colour of every theme. Each of those is a second copy, and a
+ * second copy drifts. The failures it causes are quiet ones: a tab that
+ * flickers, a page that shifts, a flash of white on a dark theme. This is where
+ * they are caught.
+ *
+ * Only what index.html says as written. What the *build* produces from it — the
+ * injected shell, the injected tags — is checked by scripts/check-shell.mjs
+ * instead, and had to move: a test here runs before `vite build`, so it read a
+ * dist from the previous build, or on a fresh clone no dist at all and skipped
+ * in silence. Four assertions that could never see the artifact they were
+ * about.
  */
 
 const SOURCE = readFileSync(fileURLToPath(new URL('../index.html', import.meta.url)), 'utf8')
-
-/** Only present after a build: the shell is injected, not written by hand. */
-const BUILT = (() => {
-  try {
-    return readFileSync(fileURLToPath(new URL('../dist/index.html', import.meta.url)), 'utf8')
-  } catch {
-    return null
-  }
-})()
 
 describe('the document the browser is served', () => {
   it('titles the page exactly as the app will retitle it', () => {
@@ -48,53 +46,5 @@ describe('the document the browser is served', () => {
       ([, attrs]) => !/type=["']application\/ld\+json["']/.test(attrs ?? ''),
     )
     expect(inline).toHaveLength(1)
-  })
-})
-
-describe.skipIf(BUILT === null)('the static landing shell', () => {
-  it('is there, in the language the app starts in', () => {
-    // An empty #app means a crawler sees no words at all, and the first paint
-    // waits for the bundle.
-    expect(BUILT).toContain(en['app.tagline'])
-    expect(BUILT).toContain(en['landing.pasteLabel'])
-    expect(BUILT).toContain(en['landing.examples'])
-  })
-
-  it('keeps the analytics beacon out of the inline-script count', () => {
-    // The beacon is only emitted when a token is configured, so this asserts a
-    // conditional: if it is there, it carries a src. Both seal-csp.mjs and the
-    // test above count *inline* scripts, and a beacon without a src would push
-    // that count to two and take the CSP hash with it.
-    const beacon = /<script([^>]*cloudflareinsights[^>]*)>/.exec(BUILT!)
-    if (beacon) expect(beacon[1]).toMatch(/\bsrc=/)
-  })
-
-  /**
-   * Nothing in <head> may stop the parser reaching the shell.
-   *
-   * The shell exists so the landing page paints without waiting for the
-   * bundle. A classic `<script src>` in <head> undoes that on its own: the
-   * parser halts there, a round trip ahead of the markup it was going to
-   * paint. registerSW.js was doing exactly that by default — and it is a
-   * `load` listener, so it had nothing to halt for.
-   *
-   * Pinned rather than fixed once, because the ways it comes back are all
-   * quiet: a plugin's default, a snippet pasted into the head, a `defer`
-   * dropped in a refactor.
-   */
-  it('lets nothing in the head stop the parser reaching the shell', () => {
-    const head = BUILT!.slice(0, BUILT!.indexOf('</head>'))
-    const blocking = [...head.matchAll(/<script[^>]*\bsrc=[^>]*>/g)]
-      .map(([tag]) => tag)
-      .filter((tag) => !/\bdefer\b|\basync\b|type="module"/.test(tag))
-    expect(blocking).toEqual([])
-  })
-
-  it('leaves the markup the app renders into', () => {
-    // main.tsx empties #app before rendering, so the shell only has to look
-    // right — but it has to be inside #app for that emptying to reach it.
-    const app = /<div id="app">([\s\S]*?)<\/body>/.exec(BUILT!)?.[1] ?? ''
-    expect(app).toContain('class="topbar"')
-    expect(app).toContain('class="page"')
   })
 })
