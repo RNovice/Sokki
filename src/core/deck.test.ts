@@ -289,24 +289,24 @@ describe('loadDeck', () => {
 
   /*
    * The real one. The cross-origin sign-in redirect is rejected before it
-   * yields anything, so the first call throws — and the probe that follows is
-   * the only thing separating this from the network being down.
+   * yields anything, so the first call throws — and what separates that from
+   * the network being down is only whether Google answers a second, simpler
+   * question.
    */
-  it('reads a rejected fetch the server still answered as not shared', async () => {
+  it('reads a sheet that failed while Google answers as not shared', async () => {
     online(true)
-    /*
-     * Any response object at all is the answer. The real one is an opaque
-     * redirect — status 0, headers and body unreadable — which is precisely
-     * why loadDeck reads its existence rather than anything in it, and why the
-     * Response constructor here cannot be made to produce one.
-     */
+    // The probe's response is opaque and there is nothing in it to read; that
+    // it resolved at all is the answer, which is why any response will do here.
     const fetch = stubFetch(new TypeError('Failed to fetch'), new Response(''))
     await expect(loadDeck(SHEET)).rejects.toMatchObject({ reason: 'not-shared' })
     expect(fetch).toHaveBeenCalledTimes(2)
-    expect(fetch.mock.calls[1]![1]).toMatchObject({ mode: 'no-cors', redirect: 'manual' })
+    // Not the deck's own URL: that is the one that redirects, and the redirect
+    // is what cannot be seen. See the comment on loadDeck.
+    expect(fetch.mock.calls[1]![0]).toBe('https://docs.google.com/robots.txt')
+    expect(fetch.mock.calls[1]![1]).toMatchObject({ mode: 'no-cors', cache: 'no-store' })
   })
 
-  it('reads a rejected fetch nobody answered as a network failure', async () => {
+  it('reads a sheet that failed while Google is silent as a network failure', async () => {
     online(true)
     stubFetch(new TypeError('Failed to fetch'), new TypeError('Failed to fetch'))
     await expect(loadDeck(SHEET)).rejects.toMatchObject({ reason: 'network' })

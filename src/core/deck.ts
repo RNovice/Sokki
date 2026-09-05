@@ -266,21 +266,32 @@ export class DeckLoadError extends Error {
 }
 
 /**
- * Whether the server answered at all.
+ * The one address on docs.google.com that answers for itself.
  *
- * Asked only when the ordinary read produced nothing to look at, and asked
- * differently on purpose: `no-cors` stops the browser enforcing a header we
- * are never going to be given, and `redirect: 'manual'` stops it following the
- * redirect. Both matter. Not following is what makes the redirect itself the
- * answer, and it is also what keeps the request on docs.google.com, which is
- * the only host connect-src allows us to reach.
- *
- * A response object coming back at all means the server replied and refused
- * us. Nothing coming back means nobody replied.
+ * `favicon.ico` was the first choice and is the wrong one: it answers 302 to
+ * ssl.gstatic.com, which connect-src does not allow, so under the real policy
+ * that probe failed for a reason with nothing to do with the network. This one
+ * answers 200 from docs.google.com with no redirect at all — measured, along
+ * with everything else here, in a headless browser carrying the policy from
+ * public/_headers.
  */
-async function serverAnswered(url: string, signal?: AbortSignal): Promise<boolean> {
+const REACHABLE = 'https://docs.google.com/robots.txt'
+
+/**
+ * Whether Google is answering at all. Asked when the deck could not be read,
+ * because the answer decides what to call the failure.
+ *
+ * `no-cors` because nothing here needs reading — the request either completes
+ * or it does not, and that is the whole question. `no-store` because an answer
+ * out of the HTTP cache would report the network healthy when it may not be,
+ * which is the one wrong answer this can give.
+ *
+ * Deliberately not the deck's own URL: that URL is the one that redirects, and
+ * every way of observing the redirect is closed. See loadDeck below.
+ */
+async function googleIsReachable(signal?: AbortSignal): Promise<boolean> {
   try {
-    await fetch(url, { signal, mode: 'no-cors', redirect: 'manual' })
+    await fetch(REACHABLE, { signal, mode: 'no-cors', cache: 'no-store' })
     return true
   } catch {
     return false
@@ -295,15 +306,29 @@ async function serverAnswered(url: string, signal?: AbortSignal): Promise<boolea
  * identified it. It does not. Watched in a browser, the request becomes two: a
  * 302 from gviz to accounts.google.com/ServiceLogin, which replies 401 and
  * carries no Access-Control-Allow-Origin for us. The browser rejects the whole
- * fetch, so there is no status to read and no body to sniff — the content-type
- * check below could never fire on the failure it was written for.
- *
- * What it cost was the app's commonest failure telling people to check their
+ * fetch, so there is no status to read and no body to sniff, and the
+ * content-type check below could never fire on the failure it was written for.
+ * What that cost was the app's commonest failure telling people to check their
  * connection while the sheet sat there needing one setting changed.
  *
- * At that point a refusal and an unreachable network look identical, so the
- * question is asked again in a form that can tell them apart. See
- * serverAnswered above.
+ * Both ways of catching the redirect itself are closed, and both were tried:
+ *
+ *   - `redirect: 'manual'` does not hand a script the opaque redirect it hands
+ *     a navigation. It throws, in cors mode and no-cors mode alike.
+ *   - `no-cors` with `redirect: 'follow'` does resolve — but only where there
+ *     is no Content-Security-Policy. Under ours the redirect lands on
+ *     accounts.google.com, which connect-src does not allow, and it throws
+ *     again. That one would have worked in dev and failed in production.
+ *
+ * So the redirect is not observable, and the question has to become a
+ * different one: not "what did this sheet answer", which nothing can see, but
+ * "is Google answering at all", which is enough. A sheet request that fails
+ * while Google is reachable failed for a reason belonging to the sheet, and
+ * unshared is overwhelmingly that reason — 404 already covers a sheet that is
+ * not there.
+ *
+ * The cost is one extra request, only on a path that has already failed, and
+ * none when the browser already knows it is offline or nobody is waiting.
  */
 export async function loadDeck(ref: DeckRef, signal?: AbortSignal): Promise<Card[]> {
   const url = sourceUrl(ref)
@@ -316,7 +341,7 @@ export async function loadDeck(ref: DeckRef, signal?: AbortSignal): Promise<Card
     // Nobody is waiting for this answer; do not spend a second request on it.
     if (signal?.aborted) throw new DeckLoadError('network')
     if (navigator.onLine === false) throw new DeckLoadError('offline')
-    if (ref.kind === 'sheet' && (await serverAnswered(url, signal))) {
+    if (ref.kind === 'sheet' && (await googleIsReachable(signal))) {
       throw new DeckLoadError('not-shared')
     }
     throw new DeckLoadError('network')
