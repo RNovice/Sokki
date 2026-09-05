@@ -270,11 +270,16 @@ describe('loadDeck', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('reads a shared sheet', async () => {
-    stubFetch(csv('front,back\nue,up'))
+    const fetch = stubFetch(csv('front,back\nue,up'))
     await expect(loadDeck(SHEET)).resolves.toEqual([
       { front: 'front', back: 'back' },
       { front: 'ue', back: 'up' },
     ])
+    // One request, and the probe is not one of them. Reading a deck is the
+    // path everything else is paid for out of; nothing diagnostic belongs on
+    // it, and a second call to Google for every deck opened would be exactly
+    // that.
+    expect(fetch).toHaveBeenCalledTimes(1)
   })
 
   it('calls a sheet that answers 404 missing, not broken', async () => {
