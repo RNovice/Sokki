@@ -303,17 +303,29 @@ export function App() {
   /* ------------------------------------------------------- source refresh */
 
   /**
-   * Re-read the deck when the source has moved, but only from its home screen.
-   * Mid-round the cards must not change underneath the reader, so the update
-   * waits — which is what the banner says while it waits.
+   * Re-read the deck when the source has moved, but never mid-round: the cards
+   * must not change underneath the reader, so the update waits — which is what
+   * the banner says while it waits.
+   *
+   * The error screen is included, and that is the case it was written for
+   * second. A sheet that is not link-shared answers with a sign-in page and a
+   * 200, which the service worker caches like any other response — so after
+   * the reader goes and shares the sheet, the first retry is served that same
+   * cached page and fails again, and only the retry after it succeeds. The
+   * revalidation behind the first one is what raises this flag, so honouring
+   * it here turns the second retry into no retry at all.
    *
    * No extra network request: the background revalidation that raised the flag
    * has already put the fresh copy in the cache, so this fetch is a cache read.
    */
   useEffect(() => {
     if (!sourceChanged || studying) return
-    if (stage.name !== 'deck' || !key) return
+    if (!key || (stage.name !== 'deck' && stage.name !== 'error')) return
     const ref = stage.ref
+    // Coming back from the error screen is a recovery, not a refresh. The
+    // notice says the cards were re-read, and a reader who has not seen them
+    // once has nothing to be told has changed.
+    const recovering = stage.name === 'error'
     let cancelled = false
     void (async () => {
       try {
@@ -325,7 +337,7 @@ export function App() {
         // is unchanged the round continues, and a card whose text was edited
         // simply shows its new text.
         setSession(loadSession(key, fresh.length))
-        setJustRefreshed(true)
+        setJustRefreshed(!recovering)
         clearSourceChanged()
       } catch {
         // Leave the flag set: the banner keeps saying so and the next visit to
