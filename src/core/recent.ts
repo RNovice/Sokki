@@ -111,7 +111,10 @@ export function renameRecent(ref: DeckRef, name: string): RecentDeck[] {
     const { title: _cleared, ...rest } = entry
     return name ? { ...rest, title: name } : rest
   })
-  writeJson(NAME, next)
+  // Same rule as forgetDeck: an empty list is stored as nothing at all, so a
+  // reader who has removed every deck leaves no key behind saying so.
+  if (next.length === 0) remove(NAME)
+  else writeJson(NAME, next)
   return next
 }
 
