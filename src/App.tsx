@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'preact/hooks'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import {
   DeckLoadError,
   deckKey,
@@ -123,8 +123,32 @@ export function App() {
 
   /* -------------------------------------------------------------- routing */
 
+  /**
+   * The load that is still wanted.
+   *
+   * Opening a deck is asynchronous and nothing used to cancel it, so two loads
+   * could be in flight at once — open a slow deck and press back, or open a
+   * second one — and the one that *finished* last won, whichever was asked for
+   * last. What that looked like was the app throwing the reader into a deck
+   * they had already left, with the address bar still on the page they went to.
+   *
+   * The signal is both halves of the fix: it cancels the request, and having
+   * been aborted is what every write below is guarded on, so a superseded load
+   * lands nowhere. loadDeck has always taken one — nothing passed it.
+   */
+  const inFlight = useRef<AbortController | null>(null)
+
+  /** Give up on whatever is loading, because we are going somewhere else. */
+  const abandonLoad = useCallback(() => {
+    inFlight.current?.abort()
+    inFlight.current = null
+  }, [])
+
   const openRef = useCallback(async (ref: DeckRef, push: boolean, markdown?: boolean) => {
     const deckKeyForRef = deckKey(ref)
+    inFlight.current?.abort()
+    const controller = new AbortController()
+    inFlight.current = controller
     /*
      * A link that names the Markdown setting overrides what is stored, because
      * whoever shared it wrote the content and knows how it is meant to be read.
@@ -153,7 +177,8 @@ export function App() {
     setStudying(false)
 
     try {
-      const cards = await measureAsync('deck-fetch', () => loadDeck(ref))
+      const cards = await measureAsync('deck-fetch', () => loadDeck(ref, controller.signal))
+      if (controller.signal.aborted) return
       setStage({ name: 'deck', ref, cards })
       // Recorded only once the sheet has actually answered with cards, so a
       // dead or unshared link never takes a slot. Recorded under the name we
@@ -170,17 +195,22 @@ export function App() {
       // ask for. Null simply means there is nothing to carry on with.
       setSession(loadSession(deckKeyForRef, cards.length))
     } catch (error) {
+      // An abandoned load is not a failure to report: the reader asked for
+      // something else, and the error screen would be about the thing they
+      // left rather than the thing they are looking at.
+      if (controller.signal.aborted) return
       const reason: LoadFailure = error instanceof DeckLoadError ? error.reason : 'network'
       setStage({ name: 'error', ref, reason })
     }
   }, [])
 
   const goHome = useCallback(() => {
+    abandonLoad()
     history.pushState({}, '', location.pathname)
     setStage({ name: 'landing' })
     setSession(null)
     setStudying(false)
-  }, [])
+  }, [abandonLoad])
 
   // Read the URL on first paint and whenever the back button moves us.
   useEffect(() => {
@@ -188,12 +218,15 @@ export function App() {
       const params = new URLSearchParams(location.search)
       const ref = refFromParams(params)
       if (ref) void openRef(ref, false, markdownFromParams(params))
-      else setStage({ name: 'landing' })
+      else {
+        abandonLoad()
+        setStage({ name: 'landing' })
+      }
     }
     sync()
     window.addEventListener('popstate', sync)
     return () => window.removeEventListener('popstate', sync)
-  }, [openRef])
+  }, [openRef, abandonLoad])
 
   /* -------------------------------------------------------------- session */
 
