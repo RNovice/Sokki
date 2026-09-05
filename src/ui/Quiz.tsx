@@ -111,13 +111,33 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
   const leaving = useRef(false)
 
   /**
-   * Move the card, and everything that follows it, without a render.
+   * The exit animation's timer, held so that leaving can cancel it.
    *
-   * The two things that change every frame — the card's transform and the
-   * tint's opacity — are written straight to the elements. `armed` still goes
-   * through state, because the buttons need it and it changes at most twice;
-   * Preact drops a setState whose value is unchanged, so the other fifty-eight
-   * frames cost nothing.
+   * `onAnswer` fires when the timer settles, not when the card is rated, so for
+   * the 190ms the card spends leaving there is an answer in the air. Pressing
+   * back inside that window unmounts the quiz and the timer used to settle
+   * anyway — rating a card for somebody who had already walked away from it,
+   * and advancing a round they had left.
+   */
+  const exitTimer = useRef<number | null>(null)
+  useEffect(
+    () => () => {
+      if (exitTimer.current !== null) window.clearTimeout(exitTimer.current)
+    },
+    [],
+  )
+
+  /**
+   * Rate the card, and hold the answer back until the card has left.
+   *
+   * `leaving` is a ref rather than state because a second swipe can arrive
+   * before a re-render, and the guard has to be true by then.
+   *
+   * What a drag costs is not settled here, and it is worth saying where it is:
+   * `dx` goes through state on every pointermove, so Quiz itself re-renders at
+   * the pointer rate. What keeps that cheap is further down — the faces, the
+   * progress line and the answer buttons are held vnodes, so a re-render
+   * reaches the card's transform and the tint's opacity and nothing else.
    */
   const commit = useCallback(
     (knew: boolean) => {
@@ -136,6 +156,7 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
       setDx(exitDx(width, knew))
 
       const settle = () => {
+        exitTimer.current = null
         leaving.current = false
         setExiting(null)
         setDx(0)
@@ -144,7 +165,7 @@ export function Quiz({ session, cards, markdown, swipeEnabled, onAnswer }: Props
       // With motion reduced there is no animation to wait for, and waiting
       // anyway would just be a pause where the card used to move.
       if (prefersReducedMotion()) settle()
-      else window.setTimeout(settle, EXIT_MS)
+      else exitTimer.current = window.setTimeout(settle, EXIT_MS)
     },
     [onAnswer],
   )
