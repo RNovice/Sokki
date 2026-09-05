@@ -3,6 +3,8 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "//engines": "scripts/check-built.mjs imports the locale modules as TypeScript. Node strips types without a flag from 22.18; below that the build dies on ERR_UNKNOWN_FILE_EXTENSION with nothing saying why.",
+  "engines": { "node": ">=22.18.0" },
   "scripts": {
     "dev": "vite",
     "check": "npm run lint && npm run typecheck && npm run test",
