@@ -84,6 +84,21 @@ export function DeckHome({
       unfinished.order.length !== roundSize(cardCount, prefs.count) ||
       (unfinished.shuffle ?? true) !== prefs.shuffle)
 
+  /** Round sizes below the deck's own. At or above it, "all" says the same. */
+  const countOptions = [10, 20, 30, 50, 100].filter((n) => n < cardCount)
+
+  /*
+   * What the size field shows, which is not always what is stored.
+   *
+   * The source is editable, so a deck can shrink below a count chosen when it
+   * was larger — and a select whose value matches none of its own options has
+   * no selection at all, so the field rendered blank. Blank is not the answer:
+   * roundSize caps a count at the deck's size, so twenty on a fifteen-card
+   * deck builds exactly the round "all" builds, and that is what it should
+   * say. The stored count is left alone and comes back if the sheet grows.
+   */
+  const shownCount = countOptions.includes(prefs.count) ? prefs.count : 0
+
   return (
     <div class="page">
       <div class="deck-headline">
@@ -166,17 +181,15 @@ export function DeckHome({
         <SelectField
           name="count"
           label={t('settings.count')}
-          value={String(prefs.count)}
+          value={String(shownCount)}
           onChange={(value) => onPrefs({ count: Number(value) })}
         >
           <option value="0">{t('settings.countAll')}</option>
-          {[10, 20, 30, 50, 100]
-            .filter((n) => n < cardCount)
-            .map((n) => (
-              <option key={n} value={String(n)}>
-                {n}
-              </option>
-            ))}
+          {countOptions.map((n) => (
+            <option key={n} value={String(n)}>
+              {n}
+            </option>
+          ))}
         </SelectField>
 
         <ToggleField
