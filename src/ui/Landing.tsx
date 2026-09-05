@@ -26,6 +26,16 @@ type Panel = 'none' | 'recent' | 'examples' | 'howto'
  */
 export function Landing({ onOpen, recent }: Props) {
   const [input, setInput] = useState('')
+  /*
+   * The message key, never the message.
+   *
+   * This held the translated string, which froze it at the moment of the
+   * refusal: switching language left the notice in the language the reader had
+   * just left, and only another bad paste — running t() again — corrected it.
+   * It is the same trap the held subtrees below take `locale` as a dependency
+   * to avoid, in a shape a dependency array cannot see. Translating where it is
+   * rendered is what makes the language it is in a fact about now.
+   */
   const [problem, setProblem] = useState<string | null>(null)
   /*
    * Counts refusals, and exists only to be a key.
@@ -56,7 +66,7 @@ export function Landing({ onOpen, recent }: Props) {
   function submit() {
     const ref = parseSheetInput(input)
     if (!ref) {
-      setProblem(t('landing.invalidUrl'))
+      setProblem('landing.invalidUrl')
       setRefusals((n) => n + 1)
       return
     }
@@ -127,7 +137,7 @@ export function Landing({ onOpen, recent }: Props) {
 
       {problem ? (
         <div key={refusals} class="notice bad again" role="alert">
-          <span>{problem}</span>
+          <span>{t(problem)}</span>
         </div>
       ) : null}
 
