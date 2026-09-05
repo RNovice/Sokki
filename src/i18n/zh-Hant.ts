@@ -39,6 +39,7 @@ export default {
   'deck.untitled': '速記卡',
 
   'error.offline': '目前離線，而且沒有這副牌的離線備份。',
+  'error.offline.hint': '請連上網路後再試一次。開過的牌組仍可離線使用。',
   'error.notShared': '這份試算表不是公開的。',
   'error.notShared.hint': '在 Google Sheets 按「共用」→「知道連結的任何人」→「檢視者」，然後再試一次。',
   'error.notFound': '找不到這份試算表。',

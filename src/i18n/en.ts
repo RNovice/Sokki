@@ -41,6 +41,7 @@ export default {
   'deck.untitled': 'Flashcards',
 
   'error.offline': "You're offline and there's no cached copy of this deck.",
+  'error.offline.hint': 'Reconnect and try again. Decks you have already opened stay available offline.',
   'error.notShared': 'This sheet is not shared publicly.',
   'error.notShared.hint': 'In Google Sheets: Share → Anyone with the link → Viewer, then try again.',
   'error.notFound': 'That sheet could not be found.',

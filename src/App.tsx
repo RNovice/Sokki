@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import {
   DeckLoadError,
   deckKey,
+  failureKey,
   findBuiltin,
   loadDeck,
   markdownFromParams,
@@ -437,8 +438,8 @@ export function App() {
           {stage.name === 'error' ? (
             <div class="page">
               <div class="notice bad">
-                <strong>{t(`error.${camel(stage.reason)}`)}</strong>
-                <span>{t(`error.${camel(stage.reason)}.hint`)}</span>
+                <strong>{t(failureKey(stage.reason))}</strong>
+                <span>{t(`${failureKey(stage.reason)}.hint`)}</span>
               </div>
               <div class="row">
                 <button class="primary" onClick={() => void openRef(stage.ref, false)}>
@@ -554,9 +555,4 @@ export function App() {
       ) : null}
     </>
   )
-}
-
-/** `not-shared` -> `notShared`, so failure reasons map straight onto i18n keys. */
-function camel(reason: string): string {
-  return reason.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
 }

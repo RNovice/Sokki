@@ -227,13 +227,36 @@ export function sheetEditUrl(ref: DeckRef): string | null {
   return `https://docs.google.com/spreadsheets/d/${ref.sheetId}/edit#gid=${ref.gid}`
 }
 
-export type LoadFailure =
-  | 'offline'
-  | 'not-shared'
-  | 'not-found'
-  | 'empty'
-  | 'unreadable'
-  | 'network'
+/**
+ * Every way loading a deck can fail, as a value rather than only a type.
+ *
+ * The interface announces each of these through a translated string it builds
+ * from the reason, so the list has to be walkable at run time — otherwise the
+ * test that checks those strings exist has to keep its own copy, and a copy is
+ * exactly what stops agreeing the day a reason is added.
+ */
+export const LOAD_FAILURES = [
+  'offline',
+  'not-shared',
+  'not-found',
+  'empty',
+  'unreadable',
+  'network',
+] as const
+
+export type LoadFailure = (typeof LOAD_FAILURES)[number]
+
+/**
+ * The message key a failure is announced under: `not-shared` becomes
+ * `error.notShared`, and the second line appends `.hint` to it.
+ *
+ * Here rather than at the call site so the test that checks every one of these
+ * exists reads the same rule the interface does. Spelled out in two places it
+ * would agree right up until the day one of them changed.
+ */
+export function failureKey(reason: LoadFailure): string {
+  return `error.${reason.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())}`
+}
 
 export class DeckLoadError extends Error {
   constructor(readonly reason: LoadFailure) {

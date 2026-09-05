@@ -39,6 +39,7 @@ export default {
   'deck.untitled': '速記カード',
 
   'error.offline': 'オフラインで、このデッキのキャッシュもありません。',
+  'error.offline.hint': 'ネットワークに接続してからもう一度お試しください。一度開いたデッキはオフラインでも使えます。',
   'error.notShared': 'このスプレッドシートは公開されていません。',
   'error.notShared.hint': '「共有」→「リンクを知っている全員」→「閲覧者」に設定してからもう一度お試しください。',
   'error.notFound': 'スプレッドシートが見つかりません。',

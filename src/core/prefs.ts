@@ -32,7 +32,8 @@ const THEMES: readonly (ThemeName | 'system')[] = [
   'dracula',
   'matcha',
 ]
-const DIRECTIONS: readonly Direction[] = ['front-back', 'back-front', 'mixed']
+/** Exported so the message test can walk the same list the validator does. */
+export const DIRECTIONS: readonly Direction[] = ['front-back', 'back-front', 'mixed']
 
 export function isLocale(value: unknown): value is Locale {
   return typeof value === 'string' && (LOCALES as readonly string[]).includes(value)
