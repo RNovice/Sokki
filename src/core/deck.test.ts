@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { DeckRef } from './types'
 import {
+  DeckLoadError,
   deckKey,
+  loadDeck,
   markdownFromInput,
   markdownFromParams,
   parseSheetInput,
@@ -231,5 +234,108 @@ describe('the markdown parameter', () => {
     // A bare spreadsheet URL says nothing about it either way.
     const sheet = `https://docs.google.com/spreadsheets/d/${ID}/edit`
     expect(markdownFromInput(sheet)).toBeUndefined()
+  })
+})
+
+/**
+ * Loading, and how each failure is told apart.
+ *
+ * None of this was covered, which is how loadDeck spent a long time believing
+ * that an unshared sheet answers with an HTML sign-in page and a 200. It
+ * answers with a redirect the browser refuses to follow across origins, so the
+ * check written for that failure could not run and the reader was told to
+ * check their connection instead. A stubbed fetch is enough to pin the whole
+ * decision table; what it cannot pin — that gviz really does redirect — is
+ * what the comment on loadDeck now records.
+ */
+describe('loadDeck', () => {
+  const SHEET: DeckRef = { kind: 'sheet', sheetId: 'a'.repeat(24), gid: '0' }
+
+  /** A fetch that answers the first call one way and any probe another. */
+  function stubFetch(...answers: (Response | Error)[]) {
+    let call = 0
+    const fetch = vi.fn((_url: string, _init?: RequestInit) => {
+      const answer = answers[Math.min(call++, answers.length - 1)]!
+      return answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer)
+    })
+    vi.stubGlobal('fetch', fetch)
+    return fetch
+  }
+
+  const csv = (body: string) =>
+    new Response(body, { status: 200, headers: { 'content-type': 'text/csv' } })
+
+  const online = (value: boolean) => vi.stubGlobal('navigator', { onLine: value })
+
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('reads a shared sheet', async () => {
+    stubFetch(csv('front,back\nue,up'))
+    await expect(loadDeck(SHEET)).resolves.toEqual([
+      { front: 'front', back: 'back' },
+      { front: 'ue', back: 'up' },
+    ])
+  })
+
+  it('calls a sheet that answers 404 missing, not broken', async () => {
+    stubFetch(new Response('', { status: 404 }))
+    await expect(loadDeck(SHEET)).rejects.toMatchObject({ reason: 'not-found' })
+  })
+
+  it('reads a refusal to our face as not shared', async () => {
+    stubFetch(new Response('', { status: 401 }))
+    await expect(loadDeck(SHEET)).rejects.toMatchObject({ reason: 'not-shared' })
+  })
+
+  /*
+   * The real one. The cross-origin sign-in redirect is rejected before it
+   * yields anything, so the first call throws — and the probe that follows is
+   * the only thing separating this from the network being down.
+   */
+  it('reads a rejected fetch the server still answered as not shared', async () => {
+    online(true)
+    /*
+     * Any response object at all is the answer. The real one is an opaque
+     * redirect — status 0, headers and body unreadable — which is precisely
+     * why loadDeck reads its existence rather than anything in it, and why the
+     * Response constructor here cannot be made to produce one.
+     */
+    const fetch = stubFetch(new TypeError('Failed to fetch'), new Response(''))
+    await expect(loadDeck(SHEET)).rejects.toMatchObject({ reason: 'not-shared' })
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(fetch.mock.calls[1]![1]).toMatchObject({ mode: 'no-cors', redirect: 'manual' })
+  })
+
+  it('reads a rejected fetch nobody answered as a network failure', async () => {
+    online(true)
+    stubFetch(new TypeError('Failed to fetch'), new TypeError('Failed to fetch'))
+    await expect(loadDeck(SHEET)).rejects.toMatchObject({ reason: 'network' })
+  })
+
+  it('says offline rather than guessing, when the browser already knows', async () => {
+    online(false)
+    const fetch = stubFetch(new TypeError('Failed to fetch'))
+    await expect(loadDeck(SHEET)).rejects.toMatchObject({ reason: 'offline' })
+    // No probe: there is nothing to find out.
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('spends no probe on a load nobody is waiting for', async () => {
+    online(true)
+    const controller = new AbortController()
+    controller.abort()
+    const fetch = stubFetch(new DOMException('Aborted', 'AbortError'))
+    await expect(loadDeck(SHEET, controller.signal)).rejects.toBeInstanceOf(DeckLoadError)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('still reads an HTML body as not shared, wherever one comes from', async () => {
+    stubFetch(new Response('<!doctype html><html>', { status: 200 }))
+    await expect(loadDeck(SHEET)).rejects.toMatchObject({ reason: 'not-shared' })
+  })
+
+  it('separates a sheet with no rows from one that could not be read', async () => {
+    stubFetch(csv('\n\n'))
+    await expect(loadDeck(SHEET)).rejects.toMatchObject({ reason: 'empty' })
   })
 })
