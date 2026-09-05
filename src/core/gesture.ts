@@ -172,9 +172,16 @@ export function swipeStrength(dx: number, cardWidth: number): number {
 /**
  * Which button releasing now would fire, or null if it would snap back.
  *
- * Derived from the same commitDistance the release uses, so the highlight and
- * the outcome cannot disagree — a button that lights up and then does not fire
- * is worse than no highlight at all.
+ * Derived from the same commitDistance the release uses, so a lit button
+ * always fires: a highlight that promises an answer and then snaps back is
+ * worse than no highlight at all.
+ *
+ * It is not the whole of shouldCommit, and deliberately not. A flick commits
+ * from as little as FLICK_MIN_PX, well short of the distance that lights
+ * anything, so a thrown card can leave with neither button lit. That is the
+ * harmless direction of the two — nothing was promised and nothing broken —
+ * and the alternative is arming a button on every fast movement that has not
+ * yet earned one.
  */
 export function armedSide(dx: number, cardWidth: number): 'known' | 'unknown' | null {
   if (swipeStrength(dx, cardWidth) < 1) return null

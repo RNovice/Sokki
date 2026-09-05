@@ -51,7 +51,7 @@ export function startMonitoring(): void {
 /**
  * Cloudflare's beacon has no public custom-event API, so anything beyond the
  * page view it collects automatically goes out as a same-origin `sendBeacon`
- * that the Pages deployment can log. With no endpoint configured this is a
+ * that the Workers deployment can log. With no endpoint configured this is a
  * no-op, which is the correct behaviour for local development.
  */
 function report(kind: string, fields: Record<string, string | number>): void {

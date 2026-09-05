@@ -57,6 +57,13 @@ function check(name, ok, detail) {
  * another check that could not fail. Slicing from #app onwards leaves the head
  * behind entirely.
  */
+/*
+ * `app` is a string, not a list. oxlint's prefer-set-has sees the `.includes`
+ * below and suggests a Set, which is the wrong shape for the question: these
+ * are substring searches through markup, not membership in a collection, and
+ * a Set cannot answer them at all.
+ */
+// oxlint-disable-next-line unicorn/prefer-set-has
 const app = html.slice(html.indexOf('<div id="app">'))
 check(
   'the static landing shell is there, in the language the app starts in',

@@ -20,8 +20,14 @@ if (!root) throw new Error('#app missing from index.html')
  * index.html ships a static copy of the landing page inside #app, so that the
  * first paint does not wait for this bundle — see `landingShell` in
  * vite.config.ts. It is emptied rather than hydrated: hydration needs the
- * markup to match what the component would produce, and it cannot, because the
- * shell is always zh-Hant while the app renders in the reader's own language.
+ * markup to match what the components would produce, and it does not. The
+ * shell is a hand-written mirror of ui/Landing and ui/TopBar — no icon in the
+ * bar's button, no recent row, chevrons written out as raw SVG — built for the
+ * crawler and the first paint rather than for a diff.
+ *
+ * The language is not the reason, though it was once given as one. The shell
+ * is English and English is what the app renders first, so those two agree;
+ * it is the structure that does not.
  *
  * Clearing costs nothing that matters. The paint it was there for has already
  * happened, and the removal and the first render are in the same task, so the
