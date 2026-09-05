@@ -2,6 +2,9 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { BUILTIN_DECKS, failureKey, LOAD_FAILURES } from '../core/deck'
+import { DIRECTIONS } from '../core/prefs'
+import { THEME_NAMES } from '../theme/apply'
 import en from './en'
 import ja from './ja'
 import zhHant from './zh-Hant'
@@ -74,6 +77,9 @@ describe('coverage', () => {
    * out — `error.${reason}.hint`, `theme.${name}`. Listing them here is the
    * point as much as the test is: these are the strings a plain search for
    * their name will not find.
+   *
+   * This exempts them from the orphan check only. That they all *exist* is the
+   * other direction, and it is checked below.
    */
   const ASSEMBLED_AT_RUNTIME = ['error.', 'theme.', 'direction.', 'deck.']
 
@@ -100,5 +106,34 @@ describe('coverage', () => {
         !source.includes(key) && !ASSEMBLED_AT_RUNTIME.some((prefix) => key.startsWith(prefix)),
     )
     expect(orphaned).toEqual([])
+  })
+})
+
+/**
+ * The messages the interface assembles instead of naming.
+ *
+ * The check above finds only what is written out as `t('some.key')`, so an
+ * assembled family could be missing a member and nothing would say so. That is
+ * not hypothetical: `error.offline.hint` was absent from all three locales, and
+ * the error screen — which appends `.hint` for every failure without asking
+ * whether that one has one — rendered the string `error.offline.hint` in front
+ * of anyone who lost their connection on a deck they had not opened before.
+ *
+ * Every list here is imported from the code that walks it rather than repeated.
+ * A copy would keep passing on the day the interface started asking for
+ * something the copy had never heard of, which is the only day it matters.
+ */
+describe('messages the interface assembles', () => {
+  const assembled = [
+    ...LOAD_FAILURES.flatMap((reason) => [failureKey(reason), `${failureKey(reason)}.hint`]),
+    // 'system' is not a theme, but it is an option in the same list.
+    ...['system', ...THEME_NAMES].map((name) => `theme.${name}`),
+    ...DIRECTIONS.map((direction) => `direction.${direction}`),
+    ...BUILTIN_DECKS.flatMap((deck) => [deck.titleKey, `${deck.titleKey}.sub`]),
+  ]
+
+  it.each(Object.keys(LOCALES))('%s has every key the interface can build', (locale) => {
+    const missing = assembled.filter((key) => !(key in LOCALES[locale]!))
+    expect(missing).toEqual([])
   })
 })
