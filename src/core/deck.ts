@@ -266,9 +266,44 @@ export class DeckLoadError extends Error {
 }
 
 /**
- * A sheet that is not link-shared answers with an HTML sign-in page and a 200,
- * not an HTTP error — so the content type, not the status, is what identifies
- * the most common failure.
+ * Whether the server answered at all.
+ *
+ * Asked only when the ordinary read produced nothing to look at, and asked
+ * differently on purpose: `no-cors` stops the browser enforcing a header we
+ * are never going to be given, and `redirect: 'manual'` stops it following the
+ * redirect. Both matter. Not following is what makes the redirect itself the
+ * answer, and it is also what keeps the request on docs.google.com, which is
+ * the only host connect-src allows us to reach.
+ *
+ * A response object coming back at all means the server replied and refused
+ * us. Nothing coming back means nobody replied.
+ */
+async function serverAnswered(url: string, signal?: AbortSignal): Promise<boolean> {
+  try {
+    await fetch(url, { signal, mode: 'no-cors', redirect: 'manual' })
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * A sheet that is not link-shared cannot simply be read and identified.
+ *
+ * This said the opposite for a long time — that such a sheet answers with an
+ * HTML sign-in page and a 200, so the content type rather than the status
+ * identified it. It does not. Watched in a browser, the request becomes two: a
+ * 302 from gviz to accounts.google.com/ServiceLogin, which replies 401 and
+ * carries no Access-Control-Allow-Origin for us. The browser rejects the whole
+ * fetch, so there is no status to read and no body to sniff — the content-type
+ * check below could never fire on the failure it was written for.
+ *
+ * What it cost was the app's commonest failure telling people to check their
+ * connection while the sheet sat there needing one setting changed.
+ *
+ * At that point a refusal and an unreachable network look identical, so the
+ * question is asked again in a form that can tell them apart. See
+ * serverAnswered above.
  */
 export async function loadDeck(ref: DeckRef, signal?: AbortSignal): Promise<Card[]> {
   const url = sourceUrl(ref)
@@ -278,10 +313,21 @@ export async function loadDeck(ref: DeckRef, signal?: AbortSignal): Promise<Card
   try {
     response = await fetch(url, { signal, redirect: 'follow' })
   } catch {
-    throw new DeckLoadError(navigator.onLine === false ? 'offline' : 'network')
+    // Nobody is waiting for this answer; do not spend a second request on it.
+    if (signal?.aborted) throw new DeckLoadError('network')
+    if (navigator.onLine === false) throw new DeckLoadError('offline')
+    if (ref.kind === 'sheet' && (await serverAnswered(url, signal))) {
+      throw new DeckLoadError('not-shared')
+    }
+    throw new DeckLoadError('network')
   }
 
   if (response.status === 404) throw new DeckLoadError('not-found')
+  // Refused to our face rather than through the sign-in redirect. Same cause,
+  // and the same thing for the reader to go and change.
+  if (response.status === 401 || response.status === 403) {
+    throw new DeckLoadError(ref.kind === 'sheet' ? 'not-shared' : 'unreadable')
+  }
   if (!response.ok) throw new DeckLoadError('network')
 
   const contentType = response.headers.get('content-type') ?? ''

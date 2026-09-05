@@ -348,7 +348,17 @@ export default defineConfig(({ mode }) => {
             options: {
               cacheName: 'deck-source',
               expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 90 },
-              cacheableResponse: { statuses: [0, 200] },
+              /*
+               * 200 only. Status 0 is an opaque response, and the comment
+               * above is the reason there should never be one: gviz sends CORS
+               * headers, so a readable response is the only kind this route is
+               * for. Admitting 0 anyway became live the day loadDeck started
+               * probing with `no-cors` to tell a refused sheet from a dead
+               * network — that probe's response is opaque, matches this route,
+               * and would otherwise be stored under the deck's own key for the
+               * next reader to get nothing out of.
+               */
+              cacheableResponse: { statuses: [200] },
               // Tells the page when the background refresh found different
               // content, so it can say so instead of swapping cards out from
               // under someone mid-round.
